@@ -1,9 +1,11 @@
 import discord
-from discord.ext import commands
+#from discord.ext import command
 import logging
 import discord.ext.commands.bot
 from emoji_list import EmojiList
 import asyncio
+from discord import app_commands
+from discord.app_commands import commands
 
 intents = discord.Intents.default()
 emoji_list = EmojiList()
@@ -59,7 +61,7 @@ class ResourceBot(commands.Bot):
         if nazi_german_trigger in [word for word in message.content.split(" ").lower()]:
             await message.channel.send(f"MACH DIE WELT EINEN BESSEREN ORT, SCHLAG EINEM NAZI INS GESICHT! {emoji_list.get(":punch:")}")
 
-    @commands.command(name="toggle_hourly_phrase", description="Toggles the bot's functionality to repeat the phrase 'Trans Rights' every hour")
+    @app_commands.command(name="toggle_hourly_phrase", description="Toggles the bot's functionality to repeat the phrase 'Trans Rights' every hour")
     async def toggle_hourly_phrase(self, ctx: discord.ext.commands.Context):
         if not self.__hourly_phrase_toggle: #function will only do anything if the bot has not been already set to repeat the phrase
             await bot.wait_until_ready() #wait for bot to be ready before starting a loop
@@ -71,9 +73,29 @@ class ResourceBot(commands.Bot):
                 self.__hourly_phrase_toggle = True #toggle the hourly phrase in case the command is called again
                 await asyncio.sleep(3600) #set the phrase to send every 1 hour (3600 seconds)
 
+    
+    @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
+    async def pronouns(self, ctx: discord.ext.commands.Context):
+        await ctx.send("https://pronoundb.org/")
+        await ctx.send("https://en.pronouns.page/")
+
+    @app_commands.command(name="help_me", description="Sends links to sites and resources for LGBTQ+ friendly mental health")
+    async def help_me(self, ctx: discord.ext.commands.Context):
+        await ctx.send("Please go to: Trevor Project (US): https://www.thetrevorproject.org \n '\
+                       Trans Lifeline (US/Canada): https://translifeline.org \n'\
+                       or LGBT Foundation (UK): https://lgbt.foundation for mental health support.")
+        
+    
+    @app_commands.command(name="register", description="Register your pronouns and info")
+    @app_commands.describe(link="Your pronouns.page link",
+    name="Your preferred name",
+    pronouns="Your pronouns (e.g., they/them)",
+    age="Your age (optional)")
+    async def register(self, ctx: discord.ext.commands.Context):
+        pass
+
+
        
-
-
 
 async def main():
     async with bot:
