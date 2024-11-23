@@ -1,13 +1,16 @@
 import discord
-#from discord.ext import command
 import logging
+import discord.ext.commands
 import discord.ext.commands.bot as bot
 from discord.ext import commands as ext_commands
 import asyncio
 from discord import app_commands
 from discord.app_commands import commands
+#from contextlib import asynccontextmanager
+import discord.ext
 
 intents = discord.Intents.default()
+intents.message_content = True
 
 
 #~~~ TESTING SECTION ~~~
@@ -22,6 +25,10 @@ class ResourceBot(bot.Bot):
     def __init__(self):
         super().__init__(command_prefix = '!', intents = intents)
         self.__hourly_phrase_toggle = False #will be for toggling the hourly phrase in a later function
+
+    @property
+    async def _hourly_phrase_toggle(self):
+        return self.__hourly_phrase_toggle
 
     async def setup_hook(self):
         print("Setting up...")
@@ -39,8 +46,10 @@ class ResourceBot(bot.Bot):
 class MyCog(ext_commands.Cog):  
     def __init__(self):
         super().__init__()
+        self.bot = ResourceBot()
 
     # Override on_message event
+    @ext_commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
             return #do nothing if message came from a bot
@@ -51,42 +60,41 @@ class MyCog(ext_commands.Cog):
         nazi_german_trigger = "nationalsozialistisch"
 
         for cop_phrase in cop_trigger_phrases:
-            if cop_phrase in [word for word in message.content.split(" ").lower()]:
-                await message.channel.send("ACAB! :police_officer:", \
-                ":heavy_equals_sign: :pig:") 
+            if cop_phrase in [word.lower() for word in message.content.split(" ")]:
+                await message.channel.send("ACAB! :police_officer:" \
+                "= :pig:") 
 
-        if heat_from_fire in [word for word in message.content.split(" ").lower()]:
-            await message.channel.send("Heat from fire! :3")
+        if heat_from_fire in [word.lower() for word in message.content.split(" ")]:
+            await message.channel.send("Fire from heat! :3")
 
         for nazi_phrase in nazi_trigger_phrases:
-            if nazi_phrase in [word for word in message.content.split(" ").lower()]:
+            if nazi_phrase in [word.lower() for word in message.content.split(" ")]:
                 await message.channel.send("MAKE THE WORLD A BETTER PLACE PUNCH A NAZI IN THE FACE! :punch:")
 
-        if nazi_german_trigger in [word for word in message.content.split(" ").lower()]:
+        if nazi_german_trigger in [word.lower() for word in message.content.split(" ")]:
             await message.channel.send("MACH DIE WELT EINEN BESSEREN ORT, SCHLAG EINEM NAZI INS GESICHT! :punch:")
 
+   
     @app_commands.command(name="toggle_hourly_phrase", description="Toggles the bot's functionality to repeat the phrase 'Trans Rights' every hour")
-    async def toggle_hourly_phrase(self, ctx: discord.ext.commands.Context):
-        if not self.__hourly_phrase_toggle: #function will only do anything if the bot has not been already set to repeat the phrase
-            await self.bot.wait_until_ready() #wait for bot to be ready before starting a loop
-            channel_id = ctx.message.channel.id
+    async def toggle_hourly_phrase(self, ctx: discord.Interaction):
+        if not await self.bot._hourly_phrase_toggle: #function will only do anything if the bot has not been already set to repeat the phrase
+            channel_id = ctx.channel_id
             channel = self.bot.get_channel(channel_id)
 
             while not self.bot.is_closed():
-                await ctx.send(":transgender_symbol: Trans Rights! :transgender_flag:") 
+                await ctx.response.send_message(":transgender_symbol: Trans Rights! :transgender_flag:") 
                 self.__hourly_phrase_toggle = True #toggle the hourly phrase in case the command is called again
                 await asyncio.sleep(3600) #set the phrase to send every 1 hour (3600 seconds)
 
     
     @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
-    async def pronouns(self, ctx: discord.ext.commands.Context):
-        await ctx.send("https://pronoundb.org/")
-        await ctx.send("https://en.pronouns.page/")
+    async def pronouns(self, ctx: discord.Interaction):
+        await ctx.response.send_message("https://pronoundb.org/ \n https://en.pronouns.page/")
 
     @app_commands.command(name="help_me", description="Sends links to sites and resources for LGBTQ+ friendly mental health")
-    async def help_me(self, ctx: discord.ext.commands.Context):
-        await ctx.send("Please go to: Trevor Project (US): https://www.thetrevorproject.org \n '\
-                       Trans Lifeline (US/Canada): https://translifeline.org \n'\
+    async def help_me(self, ctx: discord.Interaction):
+        await ctx.response.send_message("Please go to: Trevor Project (US): https://www.thetrevorproject.org \n \
+                       Trans Lifeline (US/Canada): https://translifeline.org \n \
                        or LGBT Foundation (UK): https://lgbt.foundation for mental health support.")
         
     ''' To do:
