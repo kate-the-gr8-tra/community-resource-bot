@@ -6,11 +6,23 @@ from discord.ext import commands as ext_commands
 import asyncio
 from discord import app_commands
 from discord.app_commands import commands
-#from contextlib import asynccontextmanager
 import discord.ext
+import json
 
 intents = discord.Intents.default()
 intents.message_content = True
+settings_file = "settings.json"
+
+try:
+    with open(settings_file, "r") as file:
+        settings = json.load(file)
+
+except FileNotFoundError:
+    settings = {"hourly_phrase_repeat_feature": False}
+
+def save_settings():
+    with open(settings_file, "w") as file:
+        json.dump(settings, file)
 
 
 #~~~ TESTING SECTION ~~~
@@ -64,7 +76,7 @@ class MyCog(ext_commands.Cog):
                 await message.channel.send("ACAB! :police_officer:" \
                 "= :pig:") 
 
-        if heat_from_fire in [word.lower() for word in message.content.split(" ")]:
+        if heat_from_fire == message.content.lower():
             await message.channel.send("Fire from heat! :3")
 
         for nazi_phrase in nazi_trigger_phrases:
@@ -73,10 +85,39 @@ class MyCog(ext_commands.Cog):
 
         if nazi_german_trigger in [word.lower() for word in message.content.split(" ")]:
             await message.channel.send("MACH DIE WELT EINEN BESSEREN ORT, SCHLAG EINEM NAZI INS GESICHT! :punch:")
+    
+    async def send_hourly_message(self, ctx: discord.Interaction, state: int):
+        while not self.bot.is_closed():
+            if state == 1:
+                await ctx.response.send_message(":transgender_symbol: Trans Rights! :transgender_flag:") 
+                settings["hourly_phrase_repeat_feature"] = True #toggle the hourly phrase in case the command is called again and store it in the json file
+                save_settings()
+                await asyncio.sleep(3600) #set the phrase to send every 1 hour (3600 seconds)
+            elif state == 0:
+                await ctx.response.send_message("Hourly phrase turned off.")
+                settings["hourly_phrase_repeat_feature"] = False
+                save_settings()
+                raise asyncio.CancelledError("Hourly message task cancelled.")
+            elif state == -1:
+                await ctx.response.send_message("Error: State is already set to on/off")
 
-   
+
     @app_commands.command(name="toggle_hourly_phrase", description="Toggles the bot's functionality to repeat the phrase 'Trans Rights' every hour")
-    async def toggle_hourly_phrase(self, ctx: discord.Interaction):
+    async def toggle_hourly_phrase(self, ctx: discord.Interaction, turn_on: bool):
+        if not settings["hourly_phrase_repeat_feature"] and turn_on: 
+            #function will only do anything if the bot has not been already set to repeat the phrase
+            await MyCog.send_hourly_message(self,ctx,1) 
+        elif settings["hourly_phrase_repeat_feature"] and not turn_on: 
+            #case where the feature is on and the user turns it off
+           await MyCog.send_hourly_message(self,ctx,0)
+        elif settings["hourly_phrase_repeat_feature"] and turn_on or not settings["hourly_phrase_repeat_feature"] and not turn_on: 
+            #cases where the user tries to turn on/off the feature but it's already in that state
+            await MyCog.send_hourly_message(self,ctx,-1)
+        
+
+    
+        
+        '''
         if not await self.bot._hourly_phrase_toggle: #function will only do anything if the bot has not been already set to repeat the phrase
             channel_id = ctx.channel_id
             channel = self.bot.get_channel(channel_id)
@@ -85,7 +126,7 @@ class MyCog(ext_commands.Cog):
                 await ctx.response.send_message(":transgender_symbol: Trans Rights! :transgender_flag:") 
                 self.__hourly_phrase_toggle = True #toggle the hourly phrase in case the command is called again
                 await asyncio.sleep(3600) #set the phrase to send every 1 hour (3600 seconds)
-
+        '''
     
     @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
     async def pronouns(self, ctx: discord.Interaction):
