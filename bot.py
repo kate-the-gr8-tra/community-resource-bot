@@ -8,10 +8,11 @@ from discord import app_commands
 from discord.app_commands import commands
 import discord.ext
 import json
+from typing import Optional
 
 intents = discord.Intents.default()
 intents.message_content = True
-settings_file = "settings.json"
+settings_file = "settings/settings.json"
 
 try:
     with open(settings_file, "r") as file:
@@ -114,19 +115,6 @@ class MyCog(ext_commands.Cog):
             #cases where the user tries to turn on/off the feature but it's already in that state
             await MyCog.send_hourly_message(self,ctx,-1)
         
-
-    
-        
-        '''
-        if not await self.bot._hourly_phrase_toggle: #function will only do anything if the bot has not been already set to repeat the phrase
-            channel_id = ctx.channel_id
-            channel = self.bot.get_channel(channel_id)
-
-            while not self.bot.is_closed():
-                await ctx.response.send_message(":transgender_symbol: Trans Rights! :transgender_flag:") 
-                self.__hourly_phrase_toggle = True #toggle the hourly phrase in case the command is called again
-                await asyncio.sleep(3600) #set the phrase to send every 1 hour (3600 seconds)
-        '''
     
     @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
     async def pronouns(self, ctx: discord.Interaction):
@@ -138,17 +126,23 @@ class MyCog(ext_commands.Cog):
                        Trans Lifeline (US/Canada): https://translifeline.org \n \
                        or LGBT Foundation (UK): https://lgbt.foundation for mental health support.")
         
-    ''' To do:
+    
     @app_commands.command(name="register", description="Register your pronouns and info")
-    @app_commands.describe(link="Your pronouns.page link",
+    @app_commands.describe(link="Your pronouns.page or pronoundb link",
     name="Your preferred name",
     pronouns="Your pronouns (e.g., they/them)",
     age="Your age (optional)")
-    async def register(self, ctx: discord.ext.commands.Context):
-        pass
-    '''
-
-       
+    async def register(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
+    pronouns: Optional[str], age: Optional[int]):
+        discord_user = ctx.message.author.name
+        if isinstance(link, None):
+            pass
+        elif isinstance(link, str):
+            if "pronoundb.org" in link:
+                pass  
+            elif "en.pronouns.page" in link:
+                pass
+     
 
 async def main():
     async with my_bot:
