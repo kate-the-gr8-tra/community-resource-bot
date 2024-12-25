@@ -9,6 +9,9 @@ from discord.app_commands import commands
 import discord.ext
 import json
 from typing import Optional
+from api.external_api import fetch_data
+import re
+import sqlite3
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -122,9 +125,9 @@ class MyCog(ext_commands.Cog):
 
     @app_commands.command(name="help_me", description="Sends links to sites and resources for LGBTQ+ friendly mental health")
     async def help_me(self, ctx: discord.Interaction):
-        await ctx.response.send_message("Please go to: Trevor Project (US): https://www.thetrevorproject.org \n \
-                       Trans Lifeline (US/Canada): https://translifeline.org \n \
-                       or LGBT Foundation (UK): https://lgbt.foundation for mental health support.")
+        await ctx.response.send_message("""Please go to: Trevor Project (US): https://www.thetrevorproject.org \n
+                       Trans Lifeline (US/Canada): https://translifeline.org \n 
+                       or LGBT Foundation (UK): https://lgbt.foundation for mental health support.""")
         
     
     @app_commands.command(name="register", description="Register your pronouns and info")
@@ -135,14 +138,54 @@ class MyCog(ext_commands.Cog):
     async def register(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
         discord_user = ctx.message.author.name
+        server_id = ctx.guild_id
+        server_name = ctx.guild.name
+        valid_urls = []
+        user_data = {}
+
+        with open("language_versions.txt", "r") as file:
+            links = file.readlines()
+            for url in links:
+                valid_urls.append(url)
         if isinstance(link, None):
-            pass
-        elif isinstance(link, str):
-            if "pronoundb.org" in link:
-                pass  
-            elif "en.pronouns.page" in link:
-                pass
-     
+            if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
+                user_data = {"name": name, "pronouns": pronouns, "age": age}
+        else:
+            for url in valid_urls:
+                url_format = fr"{url}/(?:@|u/)([\w-]+)$"
+                matched_link = re.match(url_format, link)
+                if matched_link:
+                    username = matched_link.group(2)
+                    user_data = fetch_data(url, {"username" : username})
+
+        if user_data != {}:
+            connection = sqlite3.connect("db/user_data.db")
+            cursor = connection.cursor()
+            cursor.execute("""INSERT INTO Users (name,pronouns,age) 
+                           VALUES (:name,:pronouns,:age)
+                           """, user_data)
+            cursor.execute("""
+            INSERT INTO Users(user_id, server_id)
+            VALUES (?,?)
+            """, (discord_user, server_id))
+            cursor.execute("SELECT * FROM Servers WHERE name = ?", (server_id))
+            result = cursor.fetchone()
+
+            if not result:
+                cursor.execute("""
+                INSERT INTO Servers(server_name, server_id)
+                VALUES (?,?)
+                """, (server_name, server_id))
+            
+
+                    
+                    
+
+
+        
+
+
+ 
 
 async def main():
     async with my_bot:
