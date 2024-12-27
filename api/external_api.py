@@ -1,9 +1,9 @@
 import aiohttp
-from bot import settings
 from typing import Optional
 
 async def fetch_data(base_link: str, params: Optional[dict]) -> Optional[dict]:
-    url = f"{base_link}/api/profile/get/{params["username"]}"
+    username = params["username"]
+    url = f"{base_link}/api/profile/get/{username}"
 
     try:
         async with aiohttp.ClientSession() as session:

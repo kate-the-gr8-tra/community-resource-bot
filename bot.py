@@ -137,7 +137,7 @@ class MyCog(ext_commands.Cog):
     age="Your age (optional)")
     async def register(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
-        discord_user = ctx.message.author.name
+        discord_user = ctx.user.name
         server_id = ctx.guild_id
         server_name = ctx.guild.name
         valid_urls = []
@@ -147,9 +147,9 @@ class MyCog(ext_commands.Cog):
             links = file.readlines()
             for url in links:
                 valid_urls.append(url)
-        if isinstance(link, None):
+        if link is None:
             if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
-                user_data = {"name": name, "pronouns": pronouns, "age": age}
+                user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
         else:
             for url in valid_urls:
                 url_format = fr"{url}/(?:@|u/)([\w-]+)$"
@@ -157,18 +157,23 @@ class MyCog(ext_commands.Cog):
                 if matched_link:
                     username = matched_link.group(2)
                     user_data = fetch_data(url, {"username" : username})
+                    user_data["user_id"] = discord_user
+                    user_data["server_id"] = server_id
 
-        if user_data != {}:
+       
+        try:
             connection = sqlite3.connect("db/user_data.db")
             cursor = connection.cursor()
-            cursor.execute("""INSERT INTO Users (name,pronouns,age) 
-                           VALUES (:name,:pronouns,:age)
-                           """, user_data)
+            cursor.execute(f"""INSERT INTO Users (name,pronouns,age,user_id,server_id) 
+                        VALUES (:name,:pronouns,:age,:user_id,:server_id)
+                        """, user_data)
+            '''
             cursor.execute("""
             INSERT INTO Users(user_id, server_id)
             VALUES (?,?)
             """, (discord_user, server_id))
-            cursor.execute("SELECT * FROM Servers WHERE name = ?", (server_id))
+            '''
+            cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (str(server_id),))
             result = cursor.fetchone()
 
             if not result:
@@ -176,16 +181,18 @@ class MyCog(ext_commands.Cog):
                 INSERT INTO Servers(server_name, server_id)
                 VALUES (?,?)
                 """, (server_name, server_id))
-            
 
-                    
-                    
+            connection.commit()
 
+            await ctx.response.send_message(f"Data for user {discord_user} sucessfully added!")
 
-        
+        except sqlite3.Error as e:
+            # Roll back in case of an error
+            print(f"An error occurred: {e}")
+            connection.rollback()
 
-
- 
+        finally:
+            connection.close()
 
 async def main():
     async with my_bot:
