@@ -15,7 +15,7 @@ import sqlite3
 
 intents = discord.Intents.default()
 intents.message_content = True
-settings_file = "settings/settings.json"
+settings_file = "config/settings.json"
 
 try:
     with open(settings_file, "r") as file:
@@ -142,24 +142,21 @@ class MyCog(ext_commands.Cog):
         server_name = ctx.guild.name
         valid_urls = []
         user_data = {}
-
-        with open("language_versions.txt", "r") as file:
-            links = file.readlines()
-            for url in links:
-                valid_urls.append(url)
         if link is None:
             if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
                 user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
         else:
-            for url in valid_urls:
-                url_format = fr"{url}/(?:@|u/)([\w-]+)$"
+            links = settings["language_versions"] 
+            for key, value in links.items():
+                url_format = fr"{key}/(?:@|u/)([\w-]+)$"
                 matched_link = re.match(url_format, link)
                 if matched_link:
-                    username = matched_link.group(2)
-                    user_data = fetch_data(url, {"username" : username})
-                    user_data["user_id"] = discord_user
-                    user_data["server_id"] = server_id
-
+                    settings["user_language_card"] = value
+                    username = matched_link.group(1)
+                    user_data = await fetch_data(key, {"username" : username})
+                    user_data.update({"user_id": discord_user, "server_id": server_id})
+                    save_settings()
+                    break
        
         try:
             connection = sqlite3.connect("db/user_data.db")
