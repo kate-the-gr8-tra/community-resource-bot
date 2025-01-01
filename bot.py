@@ -9,7 +9,7 @@ from discord.app_commands import commands
 import discord.ext
 import json
 from typing import Optional
-from api.external_api import fetch_data
+from api.external_api import fetch_data, fetch_pronoun_data, pronoun_look_up
 import re
 import sqlite3
 
@@ -142,11 +142,14 @@ class MyCog(ext_commands.Cog):
         server_name = ctx.guild.name
         valid_urls = []
         user_data = {}
+        links = settings["language_versions"]
         if link is None:
             if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
+                link_type = await pronoun_look_up(pronouns)
+                if link_type:
+                    pronouns = await fetch_pronoun_data(link_type, pronouns)
                 user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
-        else:
-            links = settings["language_versions"] 
+        else: 
             for key, value in links.items():
                 url_format = fr"{key}/(?:@|u/)([\w-]+)$"
                 matched_link = re.match(url_format, link)
@@ -190,6 +193,19 @@ class MyCog(ext_commands.Cog):
 
         finally:
             connection.close()
+
+    @app_commands.command(name="send_info", description="""Sends user information and crafts an example sentence
+                        using the user's name and/or pronoun information""")
+    async def send_info(self, ctx: discord.Interaction):
+        try:
+            connection = sqlite3.connect("db/user_data.db")
+            cursor = connection.cursor()
+
+        except sqlite3.Error as e:
+            # Roll back in case of an error
+            print(f"An error occurred: {e}")
+            connection.rollback()
+
 
 async def main():
     async with my_bot:
