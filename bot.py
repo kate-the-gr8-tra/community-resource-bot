@@ -12,6 +12,7 @@ from typing import Optional
 from api.external_api import fetch_data, fetch_pronoun_data, pronoun_look_up
 import re
 import sqlite3
+import random
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -128,10 +129,10 @@ class MyCog(ext_commands.Cog):
         await ctx.response.send_message("""Please go to: Trevor Project (US): https://www.thetrevorproject.org \n
                        Trans Lifeline (US/Canada): https://translifeline.org \n 
                        or LGBT Foundation (UK): https://lgbt.foundation for mental health support.""")
-        
-    
+
+
     @app_commands.command(name="register", description="Register your pronouns and info")
-    @app_commands.describe(link="Your pronouns.page or pronoundb link",
+    @app_commands.describe(link="Your pronouns.page link",
     name="Your preferred name",
     pronouns="Your pronouns (e.g., they/them)",
     age="Your age (optional)")
@@ -140,39 +141,13 @@ class MyCog(ext_commands.Cog):
         discord_user = ctx.user.name
         server_id = ctx.guild_id
         server_name = ctx.guild.name
-        valid_urls = []
-        user_data = {}
-        links = settings["language_versions"]
-        if link is None:
-            if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
-                link_type = await pronoun_look_up(pronouns)
-                if link_type:
-                    pronouns = await fetch_pronoun_data(link_type, pronouns)
-                user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
-        else: 
-            for key, value in links.items():
-                url_format = fr"{key}/(?:@|u/)([\w-]+)$"
-                matched_link = re.match(url_format, link)
-                if matched_link:
-                    settings["user_language_card"] = value
-                    username = matched_link.group(1)
-                    user_data = await fetch_data(key, {"username" : username})
-                    user_data.update({"user_id": discord_user, "server_id": server_id})
-                    save_settings()
-                    break
-       
+        user_data = await MyCog.verify(self, ctx, link, name, pronouns, age)
         try:
             connection = sqlite3.connect("db/user_data.db")
             cursor = connection.cursor()
             cursor.execute(f"""INSERT INTO Users (name,pronouns,age,user_id,server_id) 
                         VALUES (:name,:pronouns,:age,:user_id,:server_id)
                         """, user_data)
-            '''
-            cursor.execute("""
-            INSERT INTO Users(user_id, server_id)
-            VALUES (?,?)
-            """, (discord_user, server_id))
-            '''
             cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (str(server_id),))
             result = cursor.fetchone()
 
@@ -193,6 +168,92 @@ class MyCog(ext_commands.Cog):
 
         finally:
             connection.close()
+    
+    async def verify(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
+    pronouns: Optional[str], age: Optional[int]):
+        discord_user = ctx.user.name
+        server_id = ctx.guild_id
+        user_data = {}
+        links = settings["language_versions"]
+        if link is None:
+            if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
+                link_type = await pronoun_look_up(pronouns)
+                if link_type:
+                    pronouns = await fetch_pronoun_data(link_type, pronouns)
+                user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
+        else: 
+            for key, value in links.items():
+                url_format = fr"{key}/(?:@|u/)([\w-]+)$"
+                matched_link = re.match(url_format, link)
+                if matched_link:
+                    settings["user_language_card"] = value
+                    username = matched_link.group(1)
+                    user_data = await fetch_data(key, {"username" : username})
+                    user_data.update({"user_id": discord_user, "server_id": server_id})
+                    save_settings()
+                    break
+
+        return user_data
+       
+    
+    @app_commands.command(name="register", description="Register your pronouns and info")
+    @app_commands.describe(link="Your new pronouns.page link",
+    name="Your updated preferred name",
+    pronouns="Your updated pronouns (e.g., they/them)",
+    age="Your updated age (optional)")
+    async def edit_info(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
+    pronouns: Optional[str], age: Optional[int]):
+        discord_user = ctx.user.name
+        server_id = ctx.guild_id
+        server_name = ctx.guild.name
+        updated_data = await MyCog.verify(self, ctx, link, name, pronouns, age) 
+
+        try:
+            connection = sqlite3.connect("db/user_data.db")
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = {ctx.user.name}")
+            current_data = cursor.fetchone()
+
+            await ctx.send(f"""Your current information: \n
+            - Name: {current_data[0]} \n
+            - Pronouns: {current_data[1]} \n
+            - Age: {current_data[2]} \n
+            \n
+            """)
+
+            await ctx.send(f"""You want to update your information to: \n
+            - Name: {updated_data["name"]} \n
+            - Pronouns: {updated_data["pronouns"]}
+            - Age: {updated_data["age"]} \n
+            \n
+            """)
+
+            await ctx.send("Would you like to proceed? (yes/no)")
+
+            def check(message):
+                return message.author == ctx.author and message.content.lower() in ["yes", "no"]
+
+            try:
+                response = await my_bot.wait_for("message", check=check, timeout=60)
+                if response.content.lower() == "no":
+                    await ctx.send("No changes were made to your information.")
+                    return
+            except TimeoutError:
+                await ctx.send("Error: timed out")
+                return 
+            
+            cursor.execute(f"""UPDATE Users 
+                           SET name = {updated_data["name"]}, pronouns = {updated_data["pronouns"]}, age = {updated_data["age"]}
+                           WHERE user_id = {discord_user}""")
+            ctx.send("Your information has been updated!")
+
+        except sqlite3.Error as e:
+            # Roll back in case of an error
+            print(f"An error occurred: {e}")
+            connection.rollback()
+
+        finally:
+            connection.close()
 
     @app_commands.command(name="send_info", description="""Sends user information and crafts an example sentence
                         using the user's name and/or pronoun information""")
@@ -200,11 +261,52 @@ class MyCog(ext_commands.Cog):
         try:
             connection = sqlite3.connect("db/user_data.db")
             cursor = connection.cursor()
+            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = {ctx.user.name}")
+            user_info = cursor.fetchone()
+
+            names = user_info[0].split("/")
+            pronouns = user_info[1].split(",")
+            pronoun_form = []
+            for pronoun in pronouns:
+                pronoun_form.append(pronoun.split("/"))
 
         except sqlite3.Error as e:
             # Roll back in case of an error
             print(f"An error occurred: {e}")
             connection.rollback()
+        
+        finally:
+            connection.close()
+
+        identity_weights = await select_weights(names)
+        name = random.choices(names, identity_weights, k=1)
+        pronouns = random.choices(pronoun_form, identity_weights,k=1)
+
+        sentences = [
+        f"{name} said {pronouns[0]} would help.",
+        f"I saw {name} yesterday, and I asked {pronouns[1]} about it.",
+        f"This is {name}'s book; it's {pronouns[2]} favorite.",
+        f"Did you see {name}? {pronouns[0]} is wearing a new outfit today.",
+        f"{name} always takes care of {pronouns[4]}."
+        ]
+
+        example_sentence = random.choice(sentences)
+
+        embed = discord.Embed(title=f"{discord.user.name}'s Information", description=f"""
+                Name: {names} \n
+                Pronouns: {"/".join(pronouns)}\n
+                Age: {user_info[2]}
+                Example Sentence: {example_sentence}""", 
+                color=discord.Color.blurple())
+        
+        await ctx.send(embed)
+
+async def select_weights(my_list: list):
+
+    weight_list = []
+    weight_list[0] = 0.8
+    weight_list[1:len(my_list)] = 0.2
+    return weight_list
 
 
 async def main():
