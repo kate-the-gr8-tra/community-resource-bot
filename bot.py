@@ -13,6 +13,7 @@ from api.external_api import fetch_data, fetch_pronoun_data, pronoun_look_up
 import re
 import sqlite3
 import random
+from PIL import Image
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -71,9 +72,9 @@ class MyCog(ext_commands.Cog):
         if message.author.bot:
             return #do nothing if message came from a bot
         
-        cop_trigger_phrases = ["cop", "cops", "pigs", "pig", "police", "acab"]
+        cop_trigger_phrases = ["cops", "pigs", "police", "acab"]
         heat_from_fire = "heat from fire"
-        nazi_trigger_phrases = ["nazi", "nazis" "fascist", "fascists" "fascism"]
+        nazi_trigger_phrases = ["nazis", "fascists", "fascism"]
         nazi_german_trigger = "nationalsozialistisch"
 
         for cop_phrase in cop_trigger_phrases:
@@ -90,6 +91,47 @@ class MyCog(ext_commands.Cog):
 
         if nazi_german_trigger in [word.lower() for word in message.content.split(" ")]:
             await message.channel.send("MACH DIE WELT EINEN BESSEREN ORT, SCHLAG EINEM NAZI INS GESICHT! :punch:")
+        
+        try:
+            boy_meme = Image.open("memes/boy_meme.jpg")
+            girl_meme = Image.open("memes/girl_meme.png")
+            neutral_meme = Image.open("memes/girl_meme.jpg")
+        except FileNotFoundError:
+            print("Error: Image files not found")
+
+        roast = False
+        slurs = ["faggot", "tranny", "kys"]
+        for slur in slurs:
+            if slur in [word.lower() for word in message.content.split()]:
+                roast = True
+
+        if message.content.lower() == "kill yourself":
+            roast = True
+        
+        if roast:
+            try:
+                connection = sqlite3.connect("db/user_data.db")
+                cursor = connection.cursor()
+                cursor.execute(f"SELECT pronouns from Users WHERE user_id = {message.author.name}")
+                pronouns = cursor.fetchone()[0]
+
+            except sqlite3.Error as e:
+                # Roll back in case of an error
+                print(f"An error occurred: {e}")
+                connection.rollback()
+
+            finally:
+                connection.close()
+
+        if pronouns == "he/him/his/his/himself":
+            response_list = [boy_meme, neutral_meme, "No one is laughing.", "I’m funnier than you."]
+        elif pronouns == "she/her/her/hers/herself":
+            response_list = [girl_meme, neutral_meme, "No one is laughing.", "I’m funnier than you."]
+        else:
+            response_list = [neutral_meme, "No one is laughing.", "I’m funnier than you."]
+
+        choice = random.choice(response_list)
+        await message.channel.send(choice)
     
     async def send_hourly_message(self, ctx: discord.Interaction, state: int):
         while not self.bot.is_closed():
@@ -118,17 +160,34 @@ class MyCog(ext_commands.Cog):
         elif settings["hourly_phrase_repeat_feature"] and turn_on or not settings["hourly_phrase_repeat_feature"] and not turn_on: 
             #cases where the user tries to turn on/off the feature but it's already in that state
             await MyCog.send_hourly_message(self,ctx,-1)
-        
     
     @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
     async def pronouns(self, ctx: discord.Interaction):
         await ctx.response.send_message("https://pronoundb.org/ \n https://en.pronouns.page/")
+
+    @app_commands.command(name="explain_neopronouns", description="Sends an embed that has a brief summary of what neopronouns are and when they're used")
+    async def explain_neopronouns(self, ctx: discord.Interaction):
+        await ctx.response.send_message(discord.Embed(title="What are neopronouns", description="""Neopronouns are a subset of pronouns that
+        are outside those conventional in language. These pronouns are essentially limitless, as represent a wide range of diverse nonbinary identities
+        Examples include: ze/zir/zirs and fae/faer/faers.\n\n
+        For more reading visit the following resources: https://www.rollingstone.com/culture
+        /culture-features/neopronouns-they-them-pronoun-alternative-1190069/ \n
+        https://www.thetrevorproject.org/research-briefs/pronouns-usage-among-lgbtq-youth/
+        """, color=discord.Color.blurple()))
 
     @app_commands.command(name="help_me", description="Sends links to sites and resources for LGBTQ+ friendly mental health")
     async def help_me(self, ctx: discord.Interaction):
         await ctx.response.send_message("""Please go to: Trevor Project (US): https://www.thetrevorproject.org \n
                        Trans Lifeline (US/Canada): https://translifeline.org \n 
                        or LGBT Foundation (UK): https://lgbt.foundation for mental health support.""")
+        
+    @app_commands.command(name="haircut", description="Sends a link that allows users to find trans-friendly hair places :3")
+    async def haircut(self, ctx: discord.Interaction):
+        await ctx.response.send_message("https://strandsfortrans.org/")
+
+    @app_commands.command(name="read_books", description="Sends a resource for trans literature")
+    async def read_books(self, ctx: discord.Interaction):
+        await ctx.response.send_message("https://transreads.org/")
 
 
     @app_commands.command(name="register", description="Register your pronouns and info")
@@ -196,7 +255,7 @@ class MyCog(ext_commands.Cog):
         return user_data
        
     
-    @app_commands.command(name="register", description="Register your pronouns and info")
+    @app_commands.command(name="edit_info", description="Register your pronouns and info")
     @app_commands.describe(link="Your new pronouns.page link",
     name="Your updated preferred name",
     pronouns="Your updated pronouns (e.g., they/them)",
@@ -214,21 +273,21 @@ class MyCog(ext_commands.Cog):
             cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = {ctx.user.name}")
             current_data = cursor.fetchone()
 
-            await ctx.send(f"""Your current information: \n
+            await ctx.response.send_message(f"""Your current information: \n
             - Name: {current_data[0]} \n
             - Pronouns: {current_data[1]} \n
             - Age: {current_data[2]} \n
             \n
             """)
 
-            await ctx.send(f"""You want to update your information to: \n
+            await ctx.response.send_message(f"""You want to update your information to: \n
             - Name: {updated_data["name"]} \n
             - Pronouns: {updated_data["pronouns"]}
             - Age: {updated_data["age"]} \n
             \n
             """)
 
-            await ctx.send("Would you like to proceed? (yes/no)")
+            await ctx.response.send_message("Would you like to proceed? (yes/no)")
 
             def check(message):
                 return message.author == ctx.author and message.content.lower() in ["yes", "no"]
@@ -236,16 +295,16 @@ class MyCog(ext_commands.Cog):
             try:
                 response = await my_bot.wait_for("message", check=check, timeout=60)
                 if response.content.lower() == "no":
-                    await ctx.send("No changes were made to your information.")
+                    await ctx.response.send_message("No changes were made to your information.")
                     return
             except TimeoutError:
-                await ctx.send("Error: timed out")
+                await ctx.response.send_message("Error: timed out")
                 return 
             
             cursor.execute(f"""UPDATE Users 
                            SET name = {updated_data["name"]}, pronouns = {updated_data["pronouns"]}, age = {updated_data["age"]}
                            WHERE user_id = {discord_user}""")
-            ctx.send("Your information has been updated!")
+            ctx.response.send_message("Your information has been updated!")
 
         except sqlite3.Error as e:
             # Roll back in case of an error
@@ -255,8 +314,7 @@ class MyCog(ext_commands.Cog):
         finally:
             connection.close()
 
-    @app_commands.command(name="send_info", description="""Sends user information and crafts an example sentence
-                        using the user's name and/or pronoun information""")
+    @app_commands.command(name="send_info", description="""Sends user information and crafts an example sentence using the user's name and pronoun information""")
     async def send_info(self, ctx: discord.Interaction):
         try:
             connection = sqlite3.connect("db/user_data.db")
@@ -299,7 +357,7 @@ class MyCog(ext_commands.Cog):
                 Example Sentence: {example_sentence}""", 
                 color=discord.Color.blurple())
         
-        await ctx.send(embed)
+        await ctx.response.send_message(embed)
 
 async def select_weights(my_list: list):
 
