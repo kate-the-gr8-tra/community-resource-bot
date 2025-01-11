@@ -72,41 +72,34 @@ class MyCog(ext_commands.Cog):
         if message.author.bot:
             return #do nothing if message came from a bot
         
-        cop_trigger_phrases = ["cops", "pigs", "police", "acab"]
+        cop_trigger_phrases = [r"cops?", r"pigs?", "police", "acab"]
         heat_from_fire = "heat from fire"
-        nazi_trigger_phrases = ["nazis", "fascists", "fascism"]
+        nazi_trigger_phrases = [r"nazis?", r"fascists?", "fascism", "nazism"]
         nazi_german_trigger = "nationalsozialistisch"
 
         for cop_phrase in cop_trigger_phrases:
-            if cop_phrase in [word.lower() for word in message.content.split(" ")]:
+            if re.search(cop_phrase, message.content.lower()):
                 await message.channel.send("ACAB! :police_officer:" \
                 "= :pig:") 
 
-        if heat_from_fire == message.content.lower():
+        if heat_from_fire in message.content.lower():
             await message.channel.send("Fire from heat! :3")
 
         for nazi_phrase in nazi_trigger_phrases:
-            if nazi_phrase in [word.lower() for word in message.content.split(" ")]:
+            if re.search(nazi_phrase, message.content.lower()) :
                 await message.channel.send("MAKE THE WORLD A BETTER PLACE PUNCH A NAZI IN THE FACE! :punch:")
 
-        if nazi_german_trigger in [word.lower() for word in message.content.split(" ")]:
+        if  nazi_german_trigger in message.content.lower() :
             await message.channel.send("MACH DIE WELT EINEN BESSEREN ORT, SCHLAG EINEM NAZI INS GESICHT! :punch:")
-        
-        try:
-            boy_meme = Image.open("memes/boy_meme.jpg")
-            girl_meme = Image.open("memes/girl_meme.png")
-            neutral_meme = Image.open("memes/girl_meme.jpg")
-        except FileNotFoundError:
-            print("Error: Image files not found")
 
         roast = False
-        slurs = ["faggot", "tranny", "kys"]
+        slurs = ["faggot", "tranny", "kys", "kill yourself", 
+        "ali baba", "alligator bait", "gator bait", "oriental", "savage", "jap",
+        "chink", "coon", "nigger", "kike", "spic", "negro", ]
         for slur in slurs:
-            if slur in [word.lower() for word in message.content.split()]:
+            if slur in message.content.lower():
                 roast = True
-
-        if message.content.lower() == "kill yourself":
-            roast = True
+                break
         
         if roast:
             try:
@@ -118,20 +111,28 @@ class MyCog(ext_commands.Cog):
             except sqlite3.Error as e:
                 # Roll back in case of an error
                 print(f"An error occurred: {e}")
+                pronouns = ""
                 connection.rollback()
 
             finally:
                 connection.close()
 
-        if pronouns == "he/him/his/his/himself":
-            response_list = [boy_meme, neutral_meme, "No one is laughing.", "I’m funnier than you."]
-        elif pronouns == "she/her/her/hers/herself":
-            response_list = [girl_meme, neutral_meme, "No one is laughing.", "I’m funnier than you."]
-        else:
-            response_list = [neutral_meme, "No one is laughing.", "I’m funnier than you."]
+        boy_meme = discord.File("memes/boy_meme.jpg")
+        girl_meme = discord.File("memes/girl_meme.png")
+        neutral_meme = discord.File("memes/neutral_meme.jpg")
 
+        response_list = [neutral_meme, "No one is laughing.", "I’m funnier than you."]
+
+        if "he/him/his/his/himself" in pronouns:
+            response_list.append(boy_meme)
+        if "she/her/her/hers/herself" in pronouns:
+            response_list.append(girl_meme)
+            
         choice = random.choice(response_list)
-        await message.channel.send(choice)
+        if isinstance(choice, discord.File):
+            await message.channel.send(file=choice)
+        else:
+            await message.channel.send(choice)
     
     async def send_hourly_message(self, ctx: discord.Interaction, state: int):
         while not self.bot.is_closed():
@@ -167,11 +168,10 @@ class MyCog(ext_commands.Cog):
 
     @app_commands.command(name="explain_neopronouns", description="Sends an embed that has a brief summary of what neopronouns are and when they're used")
     async def explain_neopronouns(self, ctx: discord.Interaction):
-        await ctx.response.send_message(discord.Embed(title="What are neopronouns", description="""Neopronouns are a subset of pronouns that
+        await ctx.response.send_message(embed= discord.Embed(title="What are neopronouns", description="""Neopronouns are a subset of pronouns that
         are outside those conventional in language. These pronouns are essentially limitless, as represent a wide range of diverse nonbinary identities
         Examples include: ze/zir/zirs and fae/faer/faers.\n\n
-        For more reading visit the following resources: https://www.rollingstone.com/culture
-        /culture-features/neopronouns-they-them-pronoun-alternative-1190069/ \n
+        For more reading visit the following resources: https://dictionary.cambridge.org/us/dictionary/english/neopronoun \n
         https://www.thetrevorproject.org/research-briefs/pronouns-usage-among-lgbtq-youth/
         """, color=discord.Color.blurple()))
 
@@ -189,44 +189,59 @@ class MyCog(ext_commands.Cog):
     async def read_books(self, ctx: discord.Interaction):
         await ctx.response.send_message("https://transreads.org/")
 
-
-    @app_commands.command(name="register", description="Register your pronouns and info")
+    #TO DO: might add age verification in case of negative or very large inputs for age
+    @app_commands.command(name="register", description="Register your pronouns and info (note a link will override other info)")
     @app_commands.describe(link="Your pronouns.page link",
     name="Your preferred name",
     pronouns="Your pronouns (e.g., they/them)",
     age="Your age (optional)")
     async def register(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
+        await ctx.response.defer()
+        await asyncio.sleep(5)
+        bot_message = ""
         discord_user = ctx.user.name
         server_id = ctx.guild_id
         server_name = ctx.guild.name
         user_data = await MyCog.verify(self, ctx, link, name, pronouns, age)
-        try:
-            connection = sqlite3.connect("db/user_data.db")
-            cursor = connection.cursor()
-            cursor.execute(f"""INSERT INTO Users (name,pronouns,age,user_id,server_id) 
-                        VALUES (:name,:pronouns,:age,:user_id,:server_id)
-                        """, user_data)
-            cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (str(server_id),))
-            result = cursor.fetchone()
 
-            if not result:
-                cursor.execute("""
-                INSERT INTO Servers(server_name, server_id)
-                VALUES (?,?)
-                """, (server_name, server_id))
+        if user_data:
+            try:
+                connection = sqlite3.connect("db/user_data.db")
+                cursor = connection.cursor()
+                cursor.execute(f"""INSERT INTO Users (name,pronouns,age,user_id,server_id) 
+                            VALUES (:name,:pronouns,:age,:user_id,:server_id)
+                            """, user_data)
+                cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (str(server_id),))
+                result = cursor.fetchone()
 
-            connection.commit()
+                if not result:
+                    cursor.execute("""
+                    INSERT INTO Servers(server_name, server_id)
+                    VALUES (?,?)
+                    """, (server_name, server_id))
 
-            await ctx.response.send_message(f"Data for user {discord_user} sucessfully added!")
+                connection.commit()
 
-        except sqlite3.Error as e:
-            # Roll back in case of an error
-            print(f"An error occurred: {e}")
-            connection.rollback()
+                bot_message = f"Data for user {discord_user} sucessfully added!"
 
-        finally:
-            connection.close()
+            except sqlite3.Error as e:
+                # Roll back in case of an error
+                bot_message = f"An error occurred: {e}"
+                connection.rollback()
+
+            finally:
+                connection.close()
+        
+        elif user_data == {}: 
+            bot_message = "Error: Invalid link"
+        elif not user_data:
+            if not name:
+                bot_message = "Error: No name"
+            else:
+                bot_message = "Error: Unknown pronouns"
+
+        await ctx.followup.send(bot_message)
     
     async def verify(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
@@ -234,12 +249,17 @@ class MyCog(ext_commands.Cog):
         server_id = ctx.guild_id
         user_data = {}
         links = settings["language_versions"]
-        if link is None:
-            if isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int):
+        if not name:
+            return None
+        
+        if link is None and (isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int)):
+            if pronouns:
                 link_type = await pronoun_look_up(pronouns)
                 if link_type:
                     pronouns = await fetch_pronoun_data(link_type, pronouns)
-                user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
+                else:
+                    return None
+            user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
         else: 
             for key, value in links.items():
                 url_format = fr"{key}/(?:@|u/)([\w-]+)$"
@@ -251,7 +271,6 @@ class MyCog(ext_commands.Cog):
                     user_data.update({"user_id": discord_user, "server_id": server_id})
                     save_settings()
                     break
-
         return user_data
        
     

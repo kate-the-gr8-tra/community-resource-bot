@@ -18,7 +18,8 @@ async def fetch_data(base_link: str, params: Optional[dict]) -> Optional[dict]:
 
     names = list(data["profiles"][settings["language_versions"][base_link]]["names"].keys())
     names = "/".join(names)
-    pronouns = list(data["profiles"][settings["language_versions"][base_link]]["pronouns"].keys())
+    pronouns = data["profiles"][settings["language_versions"][base_link]]["pronouns"].keys()
+    pronouns = "/".join(pronouns)
     pronouns = await fetch_pronoun_data(base_link, pronouns)
     age = data["profiles"][settings["language_versions"][base_link]].get("age")
     
@@ -41,7 +42,7 @@ async def fetch_pronoun_data(base_link: str, pronouns: str):
             continue
         form_list = list(data["morphemes"].values()) #will always be a list with 5 string elements:
         #1: subjective, 2: objective, 3: possessive det, 4: possessive, 5: reflexive
-        pronoun_forms += "/".join(form_list)
+        pronoun_forms = "/".join(form_list)
 
         if i != 0:
             full_pronouns += ","
