@@ -248,19 +248,12 @@ class MyCog(ext_commands.Cog):
         discord_user = ctx.user.name
         server_id = ctx.guild_id
         user_data = {}
+        found_valid_link = False
         links = settings["language_versions"]
-        if not name:
+        if not name and not link:
             return None
-        
-        if link is None and (isinstance(name, str) or isinstance(pronouns, str) or isinstance(age, int)):
-            if pronouns:
-                link_type = await pronoun_look_up(pronouns)
-                if link_type:
-                    pronouns = await fetch_pronoun_data(link_type, pronouns)
-                else:
-                    return None
-            user_data = {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
-        else: 
+            
+        if link: 
             for key, value in links.items():
                 url_format = fr"{key}/(?:@|u/)([\w-]+)$"
                 matched_link = re.match(url_format, link)
@@ -269,9 +262,26 @@ class MyCog(ext_commands.Cog):
                     username = matched_link.group(1)
                     user_data = await fetch_data(key, {"username" : username})
                     user_data.update({"user_id": discord_user, "server_id": server_id})
+                    found_valid_link = True
                     save_settings()
                     break
+            
+            if pronouns and not found_valid_link:
+                user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
+
+        else:
+            if pronouns:
+                user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
         return user_data
+
+    async def try_manual_info(name:  Optional[str], pronouns: Optional[str], age: Optional[int],
+    discord_user: str, server_id: str):
+        link_type = await pronoun_look_up(pronouns)
+        if link_type:
+            pronouns = await fetch_pronoun_data(link_type, pronouns)
+        else:
+            return None
+        return {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
        
     
     @app_commands.command(name="edit_info", description="Register your pronouns and info")
