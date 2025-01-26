@@ -117,22 +117,22 @@ class MyCog(ext_commands.Cog):
             finally:
                 connection.close()
 
-        boy_meme = discord.File("memes/boy_meme.jpg")
-        girl_meme = discord.File("memes/girl_meme.png")
-        neutral_meme = discord.File("memes/neutral_meme.jpg")
+            boy_meme = discord.File("memes/boy_meme.jpg")
+            girl_meme = discord.File("memes/girl_meme.png")
+            neutral_meme = discord.File("memes/neutral_meme.jpg")
 
-        response_list = [neutral_meme, "No one is laughing.", "I’m funnier than you."]
+            response_list = [neutral_meme, "No one is laughing.", "I’m funnier than you."]
 
-        if "he/him/his/his/himself" in pronouns:
-            response_list.append(boy_meme)
-        if "she/her/her/hers/herself" in pronouns:
-            response_list.append(girl_meme)
-            
-        choice = random.choice(response_list)
-        if isinstance(choice, discord.File):
-            await message.channel.send(file=choice)
-        else:
-            await message.channel.send(choice)
+            if "he/him/his/his/himself" in pronouns:
+                response_list.append(boy_meme)
+            if "she/her/her/hers/herself" in pronouns:
+                response_list.append(girl_meme)
+                
+            choice = random.choice(response_list)
+            if isinstance(choice, discord.File):
+                await message.channel.send(file=choice)
+            else:
+                await message.channel.send(choice)
     
     async def send_hourly_message(self, ctx: discord.Interaction, state: int):
         while not self.bot.is_closed():
@@ -203,16 +203,19 @@ class MyCog(ext_commands.Cog):
         discord_user = ctx.user.name
         server_id = ctx.guild_id
         server_name = ctx.guild.name
-        user_data = await MyCog.verify(self, ctx, link, name, pronouns, age)
+        if not name and not link:
+            user_data = None
+        else:
+            user_data = await MyCog.verify(self, ctx, link, name, pronouns, age)
 
-        if user_data:
+        if user_data and user_data["age"] > 0:
             try:
                 connection = sqlite3.connect("db/user_data.db")
                 cursor = connection.cursor()
                 cursor.execute(f"""INSERT INTO Users (name,pronouns,age,user_id,server_id) 
                             VALUES (:name,:pronouns,:age,:user_id,:server_id)
                             """, user_data)
-                cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (str(server_id),))
+                cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (server_id,))
                 result = cursor.fetchone()
 
                 if not result:
@@ -240,6 +243,8 @@ class MyCog(ext_commands.Cog):
                 bot_message = "Error: No name"
             else:
                 bot_message = "Error: Unknown pronouns"
+        elif age <= 0:
+            bot_message = "Error: age cannot be 0 or less."
 
         await ctx.followup.send(bot_message)
     
@@ -250,9 +255,7 @@ class MyCog(ext_commands.Cog):
         user_data = {}
         found_valid_link = False
         links = settings["language_versions"]
-        if not name and not link:
-            return None
-            
+        
         if link: 
             for key, value in links.items():
                 url_format = fr"{key}/(?:@|u/)([\w-]+)$"
@@ -270,17 +273,16 @@ class MyCog(ext_commands.Cog):
                 user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
 
         else:
-            if pronouns:
-                user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
+            user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
         return user_data
 
     async def try_manual_info(name:  Optional[str], pronouns: Optional[str], age: Optional[int],
     discord_user: str, server_id: str):
-        link_type = await pronoun_look_up(pronouns)
-        if link_type:
-            pronouns = await fetch_pronoun_data(link_type, pronouns)
-        else:
-            return None
+        if pronouns:
+            link_type = await pronoun_look_up(pronouns)
+            if link_type:
+                pronouns = await fetch_pronoun_data(link_type, pronouns)
+            
         return {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
        
     
@@ -291,71 +293,116 @@ class MyCog(ext_commands.Cog):
     age="Your updated age (optional)")
     async def edit_info(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
+        await ctx.response.defer()
+        await asyncio.sleep(5)
         discord_user = ctx.user.name
         server_id = ctx.guild_id
         server_name = ctx.guild.name
-        updated_data = await MyCog.verify(self, ctx, link, name, pronouns, age) 
+        updated_data = await MyCog.verify(self, ctx, link, name, pronouns, age)
 
-        try:
-            connection = sqlite3.connect("db/user_data.db")
-            cursor = connection.cursor()
-            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = {ctx.user.name}")
-            current_data = cursor.fetchone()
-
-            await ctx.response.send_message(f"""Your current information: \n
-            - Name: {current_data[0]} \n
-            - Pronouns: {current_data[1]} \n
-            - Age: {current_data[2]} \n
-            \n
-            """)
-
-            await ctx.response.send_message(f"""You want to update your information to: \n
-            - Name: {updated_data["name"]} \n
-            - Pronouns: {updated_data["pronouns"]}
-            - Age: {updated_data["age"]} \n
-            \n
-            """)
-
-            await ctx.response.send_message("Would you like to proceed? (yes/no)")
-
-            def check(message):
-                return message.author == ctx.author and message.content.lower() in ["yes", "no"]
-
+        if updated_data and (not updated_data["age"] or updated_data["age"] > 0):
             try:
-                response = await my_bot.wait_for("message", check=check, timeout=60)
-                if response.content.lower() == "no":
-                    await ctx.response.send_message("No changes were made to your information.")
-                    return
-            except TimeoutError:
-                await ctx.response.send_message("Error: timed out")
-                return 
-            
-            cursor.execute(f"""UPDATE Users 
-                           SET name = {updated_data["name"]}, pronouns = {updated_data["pronouns"]}, age = {updated_data["age"]}
-                           WHERE user_id = {discord_user}""")
-            ctx.response.send_message("Your information has been updated!")
+                connection = sqlite3.connect("db/user_data.db")
+                cursor = connection.cursor()
+                cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (discord_user,))
+                current_data = cursor.fetchone()
+                
+                index = 0
+                for key, value in updated_data.items():
+                    if not value:
+                        updated_data[key] = current_data[index]
+                    index += 1
 
-        except sqlite3.Error as e:
-            # Roll back in case of an error
-            print(f"An error occurred: {e}")
-            connection.rollback()
+                await ctx.followup.send(f"""Your current information: \n
+                - Name: {current_data[0]}
+                - Pronouns: {current_data[1]}
+                - Age: {current_data[2]}
+                \n
+                """)
 
-        finally:
-            connection.close()
+                await ctx.followup.send(f"""You want to update your information to: \n
+                - Name: {updated_data["name"] } 
+                - Pronouns: {updated_data["pronouns"]}
+                - Age: {updated_data["age"]}
+                \n
+                """)
+
+                await ctx.followup.send("Would you like to proceed? (yes/no)")
+
+                def check(message):
+                    return message.author == ctx.user and message.content.lower() in ["yes", "no"]
+
+                try:
+                    response = await my_bot.wait_for("message", check=check, timeout=60)
+                    if response.content.lower() == "no":
+                        await ctx.followup.send("No changes were made to your information.")
+                        return
+                except TimeoutError:
+                    await ctx.followup.send("Error: timed out")
+                    return 
+                
+                cursor.execute(f"""UPDATE Users 
+                                SET name = ?, pronouns = ?, age = ?
+                                WHERE user_id = ?;""", (updated_data["name"], updated_data["pronouns"], updated_data["age"], discord_user, ))
+                connection.commit()
+                await ctx.followup.send("Your information has been updated!")
+
+            except sqlite3.Error as e:
+                # Roll back in case of an error
+                print(f"An error occurred: {e}")
+                connection.rollback()
+
+            finally:
+                connection.close()
+
+        elif updated_data == {}: 
+            await ctx.followup.send("Error: Invalid link")
+        elif not updated_data:
+            await ctx.followup.send("Error: Unknown pronouns")
+        elif age <= 0:
+            await ctx.followup.send("Error: age cannot be 0 or less.")
+
+        
 
     @app_commands.command(name="send_info", description="""Sends user information and crafts an example sentence using the user's name and pronoun information""")
     async def send_info(self, ctx: discord.Interaction):
         try:
             connection = sqlite3.connect("db/user_data.db")
             cursor = connection.cursor()
-            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = {ctx.user.name}")
+            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (ctx.user.name, ))
             user_info = cursor.fetchone()
 
             names = user_info[0].split("/")
             pronouns = user_info[1].split(",")
+            
+            identity_weights = [0.2] * len(names)
+            identity_weights[0] = 0.8
+
+            name = random.choices(names, identity_weights, k=1)
+            pronouns = random.choices(pronouns, identity_weights,k=1)
+
             pronoun_form = []
             for pronoun in pronouns:
-                pronoun_form.append(pronoun.split("/"))
+                pronoun_form = pronoun.split("/")
+
+            sentences = [
+            f"{name[0].capitalize()} said {pronoun_form[0]} would help.",
+            f"I saw {name[0]} yesterday, and I asked {pronoun_form[1]} about it.",
+            f"This is {name[0]}'s book; it's {pronoun_form[2]} favorite.",
+            f"Did you see {name[0]}? {pronoun_form[0].capitalize()} is wearing a new outfit today.",
+            f"{name[0].capitalize()} always takes care of {pronoun_form[4]}."
+            ]
+
+            example_sentence = random.choice(sentences)
+
+            embed = discord.Embed(title=f"{ctx.user}'s Information", description=f"""
+                    Name: {names} \n
+                    Pronouns: {"/".join(pronouns)}\n
+                    Age: {user_info[2]} \n
+                    Example Sentence: {example_sentence}""", 
+                    color=discord.Color.blurple())
+            
+            await ctx.response.send_message(embed=embed)
 
         except sqlite3.Error as e:
             # Roll back in case of an error
@@ -364,37 +411,6 @@ class MyCog(ext_commands.Cog):
         
         finally:
             connection.close()
-
-        identity_weights = await select_weights(names)
-        name = random.choices(names, identity_weights, k=1)
-        pronouns = random.choices(pronoun_form, identity_weights,k=1)
-
-        sentences = [
-        f"{name} said {pronouns[0]} would help.",
-        f"I saw {name} yesterday, and I asked {pronouns[1]} about it.",
-        f"This is {name}'s book; it's {pronouns[2]} favorite.",
-        f"Did you see {name}? {pronouns[0]} is wearing a new outfit today.",
-        f"{name} always takes care of {pronouns[4]}."
-        ]
-
-        example_sentence = random.choice(sentences)
-
-        embed = discord.Embed(title=f"{discord.user.name}'s Information", description=f"""
-                Name: {names} \n
-                Pronouns: {"/".join(pronouns)}\n
-                Age: {user_info[2]}
-                Example Sentence: {example_sentence}""", 
-                color=discord.Color.blurple())
-        
-        await ctx.response.send_message(embed)
-
-async def select_weights(my_list: list):
-
-    weight_list = []
-    weight_list[0] = 0.8
-    weight_list[1:len(my_list)] = 0.2
-    return weight_list
-
 
 async def main():
     async with my_bot:
