@@ -420,9 +420,11 @@ async def main():
 
 
 my_bot = ResourceBot()
-handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
-logging.basicConfig(level=logging.INFO, handlers=[handler])
+
+if __name__ == "__main__":
+    handler = logging.FileHandler(filename='discord.log', encoding='utf-8', mode='w')
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
 
 
-asyncio.run(main())
+    asyncio.run(main())
 
