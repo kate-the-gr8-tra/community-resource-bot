@@ -14,6 +14,7 @@ import re
 import sqlite3
 import random
 from PIL import Image
+import requests
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -59,12 +60,15 @@ class ResourceBot(bot.Bot):
             print(f"Error during command sync: {e}")
 
     async def on_ready(self):
-        print(f"'Logged in as {self.user}!'") 
+        await self.wait_until_ready()  # ✅ Ensure bot is fully initialized
+        print(f"✅ Logged in as {self.user}!")
+        print(f"📜 Connected to Guilds: {[guild.name for guild in self.guilds]}")
 
+
+        
 class MyCog(ext_commands.Cog):  
-    def __init__(self):
-        super().__init__()
-        self.bot = ResourceBot()
+    def __init__(self, bot: ResourceBot):
+        self.bot = bot
 
     # Override on_message event
     @ext_commands.Cog.listener()
@@ -189,7 +193,7 @@ class MyCog(ext_commands.Cog):
     async def read_books(self, ctx: discord.Interaction):
         await ctx.response.send_message("https://transreads.org/")
 
-    #TO DO: might add age verification in case of negative or very large inputs for age
+    #TO DO: 1) modify how the function uses defer() in order to accomodate stress_test_commands(), 2) Delete the current data for user_id for discord account
     @app_commands.command(name="register", description="Register your pronouns and info (note a link will override other info)")
     @app_commands.describe(link="Your pronouns.page link",
     name="Your preferred name",
@@ -197,7 +201,8 @@ class MyCog(ext_commands.Cog):
     age="Your age (optional)")
     async def register(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
-        await ctx.response.defer()
+        if not ctx.response.is_done():
+            await ctx.response.defer()
         await asyncio.sleep(5)
         bot_message = ""
         discord_user = ctx.user.name
@@ -412,9 +417,21 @@ class MyCog(ext_commands.Cog):
         finally:
             connection.close()
 
+
+    @app_commands.command(name="help", description="Displays all available commands.")
+    async def help(self, ctx: discord.Interaction):
+        embed = discord.Embed(title="Command List", color=discord.Color.blurple())
+
+        for cmd in self.bot.tree.get_commands():
+            embed.add_field(name=cmd.name, value=cmd.description, inline=False)
+
+        embed.set_footer(text="Use / before each command to run it")
+
+        await ctx.response.send_message(embed=embed)
+
 async def main():
     async with my_bot:
-        await my_bot.add_cog(MyCog())
+        await my_bot.add_cog(MyCog(my_bot))
         print("Cog added")
         await my_bot.start(BOT_TOKEN)
 
