@@ -1,5 +1,9 @@
 info.txt
+.env
 config/settings.json
 __pycache__/
 *.db
 .env
+stress_tests_trans_resource_bot
+discord.log
+get_command_id.py

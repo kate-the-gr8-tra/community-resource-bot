@@ -1,3 +1,10 @@
+"""
+bot.py - Main script for Trans Resource Discord Bot
+
+This bot provides LGBTQ+ resources, allows users to register pronouns, and retrieves data from Pronouns.page.
+It handles slash commands and ensures accessibility for all users.
+"""
+
 import discord
 import logging
 import discord.ext.commands
@@ -15,6 +22,8 @@ import sqlite3
 import random
 from PIL import Image
 import requests
+import os
+from dotenv import load_dotenv
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -31,22 +40,26 @@ def save_settings():
     with open(settings_file, "w") as file:
         json.dump(settings, file)
 
+load_dotenv()
 
-#~~~ TESTING SECTION ~~~
-with open('info.txt', "r") as file:
-    info_list = file.read().splitlines()
-    GUILD_IDS = info_list[0]
-    BOT_TOKEN = info_list[1]
-#~~~ TESTING SECTION ~~~
-
+BOT_TOKEN = os.getenv("DISCORD_TOKEN")
+GUILD_IDS = os.getenv("DEFAULT_GUILD_ID")
 
 class ResourceBot(bot.Bot):
+    """A Discord bot that provides transgender and LGBTQ+ resources.
+
+    This bot allows users to register their pronouns, retrieve LGBTQ+ mental health resources,
+    and access various supportive tools. It supports slash commands for easy interaction.
+    """
+
     def __init__(self):
+        """Initializes the bot with the required intents and command tree setup, also toggles the hourly phrase."""
         super().__init__(command_prefix = '!', intents = intents)
         self.__hourly_phrase_toggle = False #will be for toggling the hourly phrase in a later function
 
     @property
     async def _hourly_phrase_toggle(self):
+        """A getter method for toggling the state of the hourly phrase """
         return self.__hourly_phrase_toggle
 
     async def setup_hook(self):
@@ -54,7 +67,8 @@ class ResourceBot(bot.Bot):
         try:
             self.tree.clear_commands(guild=discord.Object(id=GUILD_IDS))
             self.tree.copy_global_to(guild=discord.Object(id = GUILD_IDS))
-            await self.tree.sync(guild=discord.Object(id = GUILD_IDS))  
+            await self.tree.sync()
+            #await self.tree.sync(guild=discord.Object(id = GUILD_IDS))  
             print("Commands synced") 
         except Exception as e:
             print(f"Error during command sync: {e}")
@@ -66,13 +80,36 @@ class ResourceBot(bot.Bot):
 
 
         
-class MyCog(ext_commands.Cog):  
+class MyCog(ext_commands.Cog): 
+    """
+    A class that defines the collection of commands that the bot will respond to, inheriting from the Cog class from discord.ext.
+
+    The commands range from listeners that prompt the bot to respond to certain phrases 
+    (such as 'heat from fire') to slash commands that allow the user to register their 
+    personal information for easy use.
+    """ 
     def __init__(self, bot: ResourceBot):
+        """Initializes the Cog class and an instance of our ResourceBot object called bot.
+        
+        Args:
+            bot (ResourceBot): The instance of the resource bot that we pass in main() to run the bot
+        """
         self.bot = bot
 
     # Override on_message event
     @ext_commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        """
+        A method that overrides the discord.on_message event. It responds to certain phrases accordingly,
+        saying certain phrases in response to a user writing phrases such as Nazi
+        and giving meme responses if the user says something edgy.
+
+        Args:
+            message (discord.Message): The message that the user sends and the bot listens to, which triggers the event listener.
+
+        Returns:
+            None: Prompts the bot to send a phrase or an image depending on certain conditions met. 
+        """
         if message.author.bot:
             return #do nothing if message came from a bot
         
@@ -98,10 +135,10 @@ class MyCog(ext_commands.Cog):
 
         roast = False
         slurs = ["faggot", "tranny", "kys", "kill yourself", 
-        "ali baba", "alligator bait", "gator bait", "oriental", "savage", "jap",
+        "alligator bait", "gator bait", "oriental", "savage", "jap",
         "chink", "coon", "nigger", "kike", "spic", "negro", ]
         for slur in slurs:
-            if slur in message.content.lower():
+            if slur == message.content.lower():
                 roast = True
                 break
         
