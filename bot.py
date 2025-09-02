@@ -466,6 +466,11 @@ class MyCog(ext_commands.Cog):
 
         await ctx.response.send_message(embed=embed)
 
+    @app_commands.command(name = "ping", description="Check if bot is alive and its latency")
+    async def ping(self, ctx: discord.Interaction):
+        latency = round(self.bot.latency * 1000)
+        await ctx.response.send_message(f"Pong! Latency: {latency} ms")
+
 async def main():
     async with my_bot:
         await my_bot.add_cog(MyCog(my_bot))
