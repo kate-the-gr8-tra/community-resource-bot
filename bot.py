@@ -97,114 +97,30 @@ class MyCog(ext_commands.Cog):
         """
         self.bot = bot
 
-    # Override on_message event
-    '''@ext_commands.Cog.listener()
-    async def on_message(self, message: discord.Message):
-        """
-        A method that overrides the discord.on_message event. It responds to certain phrases accordingly,
-        saying certain phrases in response to a user writing phrases such as Nazi
-        and giving meme responses if the user says something edgy.
-
-        Args:
-            message (discord.Message): The message that the user sends and the bot listens to, which triggers the event listener.
-
-        Returns:
-            None: Prompts the bot to send a phrase or an image depending on certain conditions met. 
-        """
-        if message.author.bot:
-            return #do nothing if message came from a bot
+    @app_commands.command(name= "resources", description="Show curated resource links by category")
+    @app_commands.describe(category = "Select the type of resource you wish to view")
+    @app_commands.choices(category = [
+        app_commands.Choice(name = "Pronoun Resources", value = "pronoun_resources"),
+        app_commands.Choice(name = "Mental Health Support", value = "support"),
+        app_commands.Choice(name = "Pronoun Information", value = "pronoun_information")
+    ])
+    async def resources(self, ctx: discord.Interaction, category: app_commands.Choice[str]):
+        data = settings["resource_links"].get(category.value, [])
+        if not data:
+            await ctx.response.send_message(f"No links found for the following category: {category.name}.", ephemeral=True)
+            return
         
-        cop_trigger_phrases = [r"cops?", r"pigs?", "police", "acab"]
-        heat_from_fire = "heat from fire"
-        nazi_trigger_phrases = [r"nazis?", r"fascists?", "fascism", "nazism"]
-        nazi_german_trigger = "nationalsozialistisch"
+        embed = discord.Embed(
+            title = f"Resources: {category.name}",
+            color=discord.Color.blurple()
+        )
 
-        for cop_phrase in cop_trigger_phrases:
-            if re.search(cop_phrase, message.content.lower()):
-                await message.channel.send("ACAB! :police_officer:" \
-                "= :pig:") 
+        for item in data:
+            embed.add_field(name=item["title"], value=item["url"], inline=False)
 
-        if heat_from_fire in message.content.lower():
-            await message.channel.send("Fire from heat! :3")
-
-        for nazi_phrase in nazi_trigger_phrases:
-            if re.search(nazi_phrase, message.content.lower()) :
-                await message.channel.send("MAKE THE WORLD A BETTER PLACE PUNCH A NAZI IN THE FACE! :punch:")
-
-        if  nazi_german_trigger in message.content.lower() :
-            await message.channel.send("MACH DIE WELT EINEN BESSEREN ORT, SCHLAG EINEM NAZI INS GESICHT! :punch:")
-
-        roast = False
-        slurs = ["faggot", "tranny", "kys", "kill yourself", 
-        "alligator bait", "gator bait", "oriental", "savage", "jap",
-        "chink", "coon", "nigger", "kike", "spic", "negro", ]
-        for slur in slurs:
-            if slur == message.content.lower():
-                roast = True
-                break
-        
-        if roast:
-            try:
-                connection = sqlite3.connect("db/user_data.db")
-                cursor = connection.cursor()
-                cursor.execute(f"SELECT pronouns from Users WHERE user_id = {message.author.name}")
-                pronouns = cursor.fetchone()[0]
-
-            except sqlite3.Error as e:
-                # Roll back in case of an error
-                print(f"An error occurred: {e}")
-                pronouns = ""
-                connection.rollback()
-
-            finally:
-                connection.close()
-
-            boy_meme = discord.File("memes/boy_meme.jpg")
-            girl_meme = discord.File("memes/girl_meme.png")
-            neutral_meme = discord.File("memes/neutral_meme.jpg")
-
-            response_list = [neutral_meme, "No one is laughing.", "I’m funnier than you."]
-
-            if "he/him/his/his/himself" in pronouns:
-                response_list.append(boy_meme)
-            if "she/her/her/hers/herself" in pronouns:
-                response_list.append(girl_meme)
-                
-            choice = random.choice(response_list)
-            if isinstance(choice, discord.File):
-                await message.channel.send(file=choice)
-            else:
-                await message.channel.send(choice)'''
+        await ctx.response.send_message(embed=embed)
     
-    '''async def send_hourly_message(self, ctx: discord.Interaction, state: int):
-        while not self.bot.is_closed():
-            if state == 1:
-                await ctx.response.send_message(":transgender_symbol: Trans Rights! :transgender_flag:") 
-                settings["hourly_phrase_repeat_feature"] = True #toggle the hourly phrase in case the command is called again and store it in the json file
-                save_settings()
-                await asyncio.sleep(3600) #set the phrase to send every 1 hour (3600 seconds)
-            elif state == 0:
-                await ctx.response.send_message("Hourly phrase turned off.")
-                settings["hourly_phrase_repeat_feature"] = False
-                save_settings()
-                raise asyncio.CancelledError("Hourly message task cancelled.")
-            elif state == -1:
-                await ctx.response.send_message("Error: State is already set to on/off")
-
-
-    @app_commands.command(name="toggle_hourly_phrase", description="Toggles the bot's functionality to repeat the phrase 'Trans Rights' every hour")
-    async def toggle_hourly_phrase(self, ctx: discord.Interaction, turn_on: bool):
-        if not settings["hourly_phrase_repeat_feature"] and turn_on: 
-            #function will only do anything if the bot has not been already set to repeat the phrase
-            await MyCog.send_hourly_message(self,ctx,1) 
-        elif settings["hourly_phrase_repeat_feature"] and not turn_on: 
-            #case where the feature is on and the user turns it off
-           await MyCog.send_hourly_message(self,ctx,0)
-        elif settings["hourly_phrase_repeat_feature"] and turn_on or not settings["hourly_phrase_repeat_feature"] and not turn_on: 
-            #cases where the user tries to turn on/off the feature but it's already in that state
-            await MyCog.send_hourly_message(self,ctx,-1)'''
-    
-    @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
+    '''@app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
     async def pronouns(self, ctx: discord.Interaction):
         await ctx.response.send_message("https://pronoundb.org/ \n https://en.pronouns.page/")
 
@@ -229,7 +145,7 @@ class MyCog(ext_commands.Cog):
 
     @app_commands.command(name="read_books", description="Sends a resource for trans literature")
     async def read_books(self, ctx: discord.Interaction):
-        await ctx.response.send_message("https://transreads.org/")
+        await ctx.response.send_message("https://transreads.org/")'''
 
     #TO DO: 1) modify how the function uses defer() in order to accomodate stress_test_commands(), 2) Delete the current data for user_id for discord account
     @app_commands.command(name="register", description="Register your pronouns and info (note a link will override other info)")
