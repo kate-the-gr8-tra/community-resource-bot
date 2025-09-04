@@ -1,13 +1,14 @@
 """
-bot.py - Main script for Trans Resource Discord Bot
+bot.py - Main script for Community Resource Discord Bot
 
-This bot provides LGBTQ+ resources, allows users to register pronouns, and retrieves data from Pronouns.page.
+This bot provides curated community resources, allows users to profile information (e.g. name, pronouns, age, etc), 
+and integrates external API for attribute lookup
 It handles slash commands and ensures accessibility for all users.
 """
 
 import discord
 import logging
-import discord.ext.commands
+#import discord.ext.commands
 import discord.ext.commands.bot as bot
 from discord.ext import commands as ext_commands
 import asyncio
@@ -20,13 +21,13 @@ from api.external_api import fetch_data, fetch_pronoun_data, pronoun_look_up
 import re
 import sqlite3
 import random
-from PIL import Image
-import requests
+#from PIL import Image
+#import requests
 import os
 from dotenv import load_dotenv
 
 intents = discord.Intents.default()
-intents.message_content = True
+#intents.message_content = True
 settings_file = "config/settings.json"
 
 try:
@@ -46,21 +47,21 @@ BOT_TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_IDS = os.getenv("DEFAULT_GUILD_ID")
 
 class ResourceBot(bot.Bot):
-    """A Discord bot that provides transgender and LGBTQ+ resources.
+    """A Discord bot that provides curated resources for online communities.
 
-    This bot allows users to register their pronouns, retrieve LGBTQ+ mental health resources,
-    and access various supportive tools. It supports slash commands for easy interaction.
+    Users can register profile information, retrieve resource links, and access supportive tools.
+    It supports slash commands for easy interaction.
     """
 
     def __init__(self):
         """Initializes the bot with the required intents and command tree setup, also toggles the hourly phrase."""
         super().__init__(command_prefix = '!', intents = intents)
-        self.__hourly_phrase_toggle = False #will be for toggling the hourly phrase in a later function
+        #self.__hourly_phrase_toggle = False #will be for toggling the hourly phrase in a later function
 
-    @property
+    '''@property
     async def _hourly_phrase_toggle(self):
         """A getter method for toggling the state of the hourly phrase """
-        return self.__hourly_phrase_toggle
+        return self.__hourly_phrase_toggle'''
 
     async def setup_hook(self):
         print("Setting up...")
@@ -97,7 +98,7 @@ class MyCog(ext_commands.Cog):
         self.bot = bot
 
     # Override on_message event
-    @ext_commands.Cog.listener()
+    '''@ext_commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         """
         A method that overrides the discord.on_message event. It responds to certain phrases accordingly,
@@ -173,9 +174,9 @@ class MyCog(ext_commands.Cog):
             if isinstance(choice, discord.File):
                 await message.channel.send(file=choice)
             else:
-                await message.channel.send(choice)
+                await message.channel.send(choice)'''
     
-    async def send_hourly_message(self, ctx: discord.Interaction, state: int):
+    '''async def send_hourly_message(self, ctx: discord.Interaction, state: int):
         while not self.bot.is_closed():
             if state == 1:
                 await ctx.response.send_message(":transgender_symbol: Trans Rights! :transgender_flag:") 
@@ -201,7 +202,7 @@ class MyCog(ext_commands.Cog):
            await MyCog.send_hourly_message(self,ctx,0)
         elif settings["hourly_phrase_repeat_feature"] and turn_on or not settings["hourly_phrase_repeat_feature"] and not turn_on: 
             #cases where the user tries to turn on/off the feature but it's already in that state
-            await MyCog.send_hourly_message(self,ctx,-1)
+            await MyCog.send_hourly_message(self,ctx,-1)'''
     
     @app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
     async def pronouns(self, ctx: discord.Interaction):
