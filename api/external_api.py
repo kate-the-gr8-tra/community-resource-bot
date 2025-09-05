@@ -16,11 +16,22 @@ async def fetch_data(base_link: str, params: Optional[dict]) -> Optional[dict]:
     url = f"{base_link}/api/profile/get/{username}"
     data = await api_call(url)
 
-    names = list(data["profiles"][settings["language_versions"][base_link]]["names"].keys())
-    names = "/".join(names)
-    pronouns = data["profiles"][settings["language_versions"][base_link]]["pronouns"].keys()
-    pronouns = "/".join(pronouns)
+    #TODO: filter out all names/pronouns with a value of -1
+    names_list = data["profiles"][settings["language_versions"][base_link]]["names"]
+    preferred_names = {k : v for k, v in names_list.items() if v == 1}
+    for key, value in names_list.items():
+        if value == 0:
+            preferred_names.update({key : value})
+    names = "/".join(preferred_names.keys())
+    
+    pronouns_list = data["profiles"][settings["language_versions"][base_link]]["pronouns"]
+    preferred_pronouns = {k : v for k, v in pronouns_list.items() if v == 1}
+    for key, value in pronouns_list.items():
+        if value == 0:
+            preferred_pronouns.update({key : value})
+    pronouns = "/".join(preferred_pronouns.keys())
     pronouns = await fetch_pronoun_data(base_link, pronouns)
+
     age = data["profiles"][settings["language_versions"][base_link]].get("age")
     
     user_info = {

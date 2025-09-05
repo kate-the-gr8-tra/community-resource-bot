@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS Servers(
 
 CREATE TABLE IF NOT EXISTS Users(
 	user_id TEXT PRIMARY KEY,
+	username TEXT NOT NULL,
 	server_id TEXT NOT NULL,
 	name TEXT,
 	pronouns TEXT,

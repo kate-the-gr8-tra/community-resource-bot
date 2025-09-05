@@ -7,3 +7,4 @@ __pycache__/
 stress_tests_trans_resource_bot
 discord.log
 get_command_id.py
+user_data.db.sqbpro

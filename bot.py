@@ -33,9 +33,10 @@ settings_file = "config/settings.json"
 try:
     with open(settings_file, "r") as file:
         settings = json.load(file)
-
 except FileNotFoundError:
-    settings = {"hourly_phrase_repeat_feature": False}
+    print("Error: settings.json not found")
+    raise
+#    settings = {"hourly_phrase_repeat_feature": False}
 
 def save_settings():
     with open(settings_file, "w") as file:
@@ -120,34 +121,8 @@ class MyCog(ext_commands.Cog):
 
         await ctx.response.send_message(embed=embed)
     
-    '''@app_commands.command(name="pronouns", description="Sends links to sites where you can explore pronouns")
-    async def pronouns(self, ctx: discord.Interaction):
-        await ctx.response.send_message("https://pronoundb.org/ \n https://en.pronouns.page/")
-
-    @app_commands.command(name="explain_neopronouns", description="Sends an embed that has a brief summary of what neopronouns are and when they're used")
-    async def explain_neopronouns(self, ctx: discord.Interaction):
-        await ctx.response.send_message(embed= discord.Embed(title="What are neopronouns", description="""Neopronouns are a subset of pronouns that
-        are outside those conventional in language. These pronouns are essentially limitless, as represent a wide range of diverse nonbinary identities
-        Examples include: ze/zir/zirs and fae/faer/faers.\n\n
-        For more reading visit the following resources: https://dictionary.cambridge.org/us/dictionary/english/neopronoun \n
-        https://www.thetrevorproject.org/research-briefs/pronouns-usage-among-lgbtq-youth/
-        """, color=discord.Color.blurple()))
-
-    @app_commands.command(name="help_me", description="Sends links to sites and resources for LGBTQ+ friendly mental health")
-    async def help_me(self, ctx: discord.Interaction):
-        await ctx.response.send_message("""Please go to: Trevor Project (US): https://www.thetrevorproject.org \n
-                       Trans Lifeline (US/Canada): https://translifeline.org \n 
-                       or LGBT Foundation (UK): https://lgbt.foundation for mental health support.""")
-        
-    @app_commands.command(name="haircut", description="Sends a link that allows users to find trans-friendly hair places :3")
-    async def haircut(self, ctx: discord.Interaction):
-        await ctx.response.send_message("https://strandsfortrans.org/")
-
-    @app_commands.command(name="read_books", description="Sends a resource for trans literature")
-    async def read_books(self, ctx: discord.Interaction):
-        await ctx.response.send_message("https://transreads.org/")'''
-
-    #TO DO: 1) modify how the function uses defer() in order to accomodate stress_test_commands(), 2) Delete the current data for user_id for discord account
+    
+    #TODO: Update the information here to insert values for a username AND a user_id (will affect the verify function also)
     @app_commands.command(name="register", description="Register your pronouns and info (note a link will override other info)")
     @app_commands.describe(link="Your pronouns.page link",
     name="Your preferred name",
@@ -171,8 +146,8 @@ class MyCog(ext_commands.Cog):
             try:
                 connection = sqlite3.connect("db/user_data.db")
                 cursor = connection.cursor()
-                cursor.execute(f"""INSERT INTO Users (name,pronouns,age,user_id,server_id) 
-                            VALUES (:name,:pronouns,:age,:user_id,:server_id)
+                cursor.execute(f"""INSERT INTO Users (user_id, username, server_id, name, pronouns, age) 
+                            VALUES (:user_id, :username, :server_id, :name, :pronouns, :age)
                             """, user_data)
                 cursor.execute("SELECT * FROM Servers WHERE server_id = ?", (server_id,))
                 result = cursor.fetchone()
@@ -209,7 +184,8 @@ class MyCog(ext_commands.Cog):
     
     async def verify(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
-        discord_user = ctx.user.name
+        discord_username = ctx.user.name
+        discord_user_id = ctx.user.id
         server_id = ctx.guild_id
         user_data = {}
         found_valid_link = False
@@ -222,27 +198,29 @@ class MyCog(ext_commands.Cog):
                 if matched_link:
                     settings["user_language_card"] = value
                     username = matched_link.group(1)
-                    user_data = await fetch_data(key, {"username" : username})
-                    user_data.update({"user_id": discord_user, "server_id": server_id})
+                    user_data = {"user_id": discord_user_id, "username": discord_username, "server_id": server_id}
+                    user_data.update(await fetch_data(key, {"username" : username}))
                     found_valid_link = True
                     save_settings()
                     break
             
             if pronouns and not found_valid_link:
-                user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
+                user_data = await MyCog.try_manual_info(discord_user_id, discord_username, server_id, 
+                name, pronouns, age)
 
         else:
-            user_data = await MyCog.try_manual_info(name, pronouns, age, discord_user, server_id)
+            user_data = await MyCog.try_manual_info(discord_user_id, discord_username, server_id, 
+            name, pronouns, age)
         return user_data
 
-    async def try_manual_info(name:  Optional[str], pronouns: Optional[str], age: Optional[int],
-    discord_user: str, server_id: str):
+    async def try_manual_info(user_id : str, username: str, server_id: str, name: Optional[str],
+    pronouns: Optional[str], age: Optional[int]):
         if pronouns:
             link_type = await pronoun_look_up(pronouns)
             if link_type:
                 pronouns = await fetch_pronoun_data(link_type, pronouns)
-            
-        return {"name": name, "pronouns": pronouns, "age": age, "user_id": discord_user, "server_id": server_id}
+        return {"user_id": user_id, "username": username, "server_id": server_id, 
+        "name": name, "pronouns": pronouns, "age" : age} 
        
     
     @app_commands.command(name="edit_info", description="Register your pronouns and info")
