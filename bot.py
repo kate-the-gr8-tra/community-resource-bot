@@ -8,26 +8,22 @@ It handles slash commands and ensures accessibility for all users.
 
 import discord
 import logging
-#import discord.ext.commands
 import discord.ext.commands.bot as bot
 from discord.ext import commands as ext_commands
 import asyncio
 from discord import app_commands
-from discord.app_commands import commands
-import discord.ext
 import json
 from typing import Optional
 from api.external_api import fetch_data, fetch_pronoun_data, pronoun_look_up
 import re
 import sqlite3
 import random
-#from PIL import Image
-#import requests
 import os
 from dotenv import load_dotenv
+from collections import deque
 
 intents = discord.Intents.default()
-#intents.message_content = True
+intents.message_content = True
 settings_file = "config/settings.json"
 
 try:
@@ -232,20 +228,22 @@ class MyCog(ext_commands.Cog):
     pronouns: Optional[str], age: Optional[int]):
         await ctx.response.defer()
         await asyncio.sleep(5)
-        discord_user = ctx.user.name
-        server_id = ctx.guild_id
-        server_name = ctx.guild.name
+        discord_username = ctx.user.name
+        discord_user_id = ctx.user.id
+        #server_id = ctx.guild_id
+        #server_name = ctx.guild.name
         updated_data = await MyCog.verify(self, ctx, link, name, pronouns, age)
 
         if updated_data and (not updated_data["age"] or updated_data["age"] > 0):
             try:
                 connection = sqlite3.connect("db/user_data.db")
                 cursor = connection.cursor()
-                cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (discord_user,))
+                cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (discord_user_id,))
                 current_data = cursor.fetchone()
                 
+                truncated_dict = dict(deque(updated_data.items(), maxlen=3))
                 index = 0
-                for key, value in updated_data.items():
+                for key, value in truncated_dict.items():
                     if not value:
                         updated_data[key] = current_data[index]
                     index += 1
@@ -269,6 +267,7 @@ class MyCog(ext_commands.Cog):
                 def check(message):
                     return message.author == ctx.user and message.content.lower() in ["yes", "no"]
 
+
                 try:
                     response = await my_bot.wait_for("message", check=check, timeout=60)
                     if response.content.lower() == "no":
@@ -280,7 +279,7 @@ class MyCog(ext_commands.Cog):
                 
                 cursor.execute(f"""UPDATE Users 
                                 SET name = ?, pronouns = ?, age = ?
-                                WHERE user_id = ?;""", (updated_data["name"], updated_data["pronouns"], updated_data["age"], discord_user, ))
+                                WHERE user_id = ?;""", (updated_data["name"], updated_data["pronouns"], updated_data["age"], discord_user_id, ))
                 connection.commit()
                 await ctx.followup.send("Your information has been updated!")
 
