@@ -119,7 +119,7 @@ class MyCog(ext_commands.Cog):
     
     
     #TODO: Update the information here to insert values for a username AND a user_id (will affect the verify function also)
-    @app_commands.command(name="register", description="Register your pronouns and info (note a link will override other info)")
+    @app_commands.command(name="register", description="Register your pronouns and info (note: a link will override other info)")
     @app_commands.describe(link="Your pronouns.page link",
     name="Your preferred name",
     pronouns="Your pronouns (e.g., they/them)",
@@ -264,7 +264,7 @@ class MyCog(ext_commands.Cog):
 
                 await ctx.followup.send("Would you like to proceed? (yes/no)")
 
-                def check(message):
+                def check(message : discord.Message):
                     return message.author == ctx.user and message.content.lower() in ["yes", "no"]
 
 
@@ -305,17 +305,20 @@ class MyCog(ext_commands.Cog):
         try:
             connection = sqlite3.connect("db/user_data.db")
             cursor = connection.cursor()
-            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (ctx.user.name, ))
+            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (ctx.user.id, ))
             user_info = cursor.fetchone()
 
             names = user_info[0].split("/")
             pronouns = user_info[1].split(",")
-            
-            identity_weights = [0.2] * len(names)
-            identity_weights[0] = 0.8
 
-            name = random.choices(names, identity_weights, k=1)
-            pronouns = random.choices(pronouns, identity_weights,k=1)
+            
+            name_weights = [0.2] * len(names)
+            name_weights[0] = 0.8
+            name = random.choices(names, name_weights, k=1)
+
+            pronoun_weights = [0.2] * len(pronouns)
+            pronoun_weights[0] = 0.8
+            pronouns = random.choices(pronouns, pronoun_weights,k=1)
 
             pronoun_form = []
             for pronoun in pronouns:
@@ -347,8 +350,7 @@ class MyCog(ext_commands.Cog):
         
         finally:
             connection.close()
-
-
+        
     @app_commands.command(name="help", description="Displays all available commands.")
     async def help(self, ctx: discord.Interaction):
         embed = discord.Embed(title="Command List", color=discord.Color.blurple())
