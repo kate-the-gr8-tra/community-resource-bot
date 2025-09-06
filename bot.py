@@ -133,6 +133,8 @@ class MyCog(ext_commands.Cog):
         discord_user = ctx.user.name
         server_id = ctx.guild_id
         server_name = ctx.guild.name
+        ephemeral_message = False
+
         if not name and not link:
             user_data = None
         else:
@@ -157,6 +159,11 @@ class MyCog(ext_commands.Cog):
                 connection.commit()
 
                 bot_message = f"Data for user {discord_user} sucessfully added!"
+                bot_message += """Note: This bot stores your profile (name, pronouns, age, Discord ID, and server ID) 
+                so it can respond to commands like /send_info.
+                You can update it anytime with /register or /edit_info, and you can remove it completely with 
+                /delete_my_data."""
+                ephemeral_message = True
 
             except sqlite3.Error as e:
                 # Roll back in case of an error
@@ -176,7 +183,7 @@ class MyCog(ext_commands.Cog):
         elif age <= 0:
             bot_message = "Error: age cannot be 0 or less."
 
-        await ctx.followup.send(bot_message)
+        await ctx.followup.send(bot_message, ephemeral=ephemeral_message)
     
     async def verify(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
@@ -226,7 +233,8 @@ class MyCog(ext_commands.Cog):
     age="Your updated age (optional)")
     async def edit_info(self, ctx: discord.Interaction, link: Optional[str], name:  Optional[str],
     pronouns: Optional[str], age: Optional[int]):
-        await ctx.response.defer()
+        if not ctx.response.is_done():
+            await ctx.response.defer()
         await asyncio.sleep(5)
         discord_username = ctx.user.name
         discord_user_id = ctx.user.id
@@ -253,14 +261,14 @@ class MyCog(ext_commands.Cog):
                 - Pronouns: {current_data[1]}
                 - Age: {current_data[2]}
                 \n
-                """)
+                """, ephemeral=True)
 
                 await ctx.followup.send(f"""You want to update your information to: \n
                 - Name: {updated_data["name"] } 
                 - Pronouns: {updated_data["pronouns"]}
                 - Age: {updated_data["age"]}
                 \n
-                """)
+                """, ephemeral=True)
 
                 await ctx.followup.send("Would you like to proceed? (yes/no)")
 
@@ -296,9 +304,53 @@ class MyCog(ext_commands.Cog):
         elif not updated_data:
             await ctx.followup.send("Error: Unknown pronouns")
         elif age <= 0:
-            await ctx.followup.send("Error: age cannot be 0 or less.")
+            await ctx.followup.send("Error: age cannot be 0 or less.") 
 
-        
+    @app_commands.command(name="delete_info", description="""Deletes user information from the registry""")    
+    async def delete_info(self, ctx: discord.Interaction):
+        if not ctx.response.is_done():
+            await ctx.response.defer()
+        await asyncio.sleep(5)
+        try:
+            connection = sqlite3.connect("db/user_data.db")
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT name, pronouns, age FROM Users WHERE user_id = ?", (ctx.user.id,))
+            user_info = cursor.fetchone()
+
+            await ctx.followup.send(f"""Your current information: \n
+                - Name: {user_info[0]}
+                - Pronouns: {user_info[1]}
+                - Age: {user_info[2]}
+                \n
+                """, ephemeral=True)
+            
+            await ctx.followup.send("Would you like to delete your information? (yes/no)")
+
+
+            def check(message : discord.Message):
+                return message.author == ctx.user and message.content.lower() in ["yes", "no"]
+            
+            try:
+                response = await my_bot.wait_for("message", check=check, timeout=60)
+                if response.content.lower() == "no":
+                    await ctx.followup.send("User information not deleted")
+                    return
+            except TimeoutError:
+                await ctx.followup.send("Error: timed out")
+                return 
+            
+            cursor.execute(f"DELETE FROM Users WHERE user_id = ?", (ctx.user.id,))
+            connection.commit()
+            await ctx.followup.send("Your stored information has been removed. " \
+            "You can re-register at any time with /register.")
+            
+        except sqlite3.Error as e:
+            # Roll back in case of an error
+            print(f"An error occurred: {e}")
+            connection.rollback()
+
+        finally:
+            connection.close()
 
     @app_commands.command(name="send_info", description="""Sends user information and crafts an example sentence using the user's name and pronoun information""")
     async def send_info(self, ctx: discord.Interaction):
@@ -334,7 +386,7 @@ class MyCog(ext_commands.Cog):
 
             example_sentence = random.choice(sentences)
 
-            embed = discord.Embed(title=f"{ctx.user}'s Information", description=f"""
+            embed = discord.Embed(title=f"{name[0]}'s Information", description=f"""
                     Name: {names} \n
                     Pronouns: {"/".join(pronouns)}\n
                     Age: {user_info[2]} \n
