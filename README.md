@@ -1,13 +1,12 @@
-# Trans Resource Bot 🏳️‍⚧️
+# Community Resource Bot
 
-A Discord bot that provides trans-related resources, user data handling, and automated meme responses. This bot is designed to help create a supportive and interactive community experience.
+This Community Resource Bot is a Discord bot that provides users with access to curated resources and simple self-service commands. It demonstrates the use of:
 
 ## Features 
 
-* 📌 Trans Resources: Shares helpful information for transgender individuals.
-* 🔄 Database Support: Stores and retrieves user pronoun data.
-* 🖼 Meme Generator: Responds with memes based on user input.
-* 🔗 API Integration: Connects to pronoun.page (and respective language versions) APIs for additional functionality.
+* Slash commands (`/register`, `/edit_info`, `/send_info`, `/resources`, etc.)
+* A local SQLite database for user data
+* Integration with the pronouns.page API
 
 ## Technologies Used
 * Python 3.11+
@@ -19,7 +18,7 @@ A Discord bot that provides trans-related resources, user data handling, and aut
 ## To Install
 ### 1. Clone the repository
  ```
- git clone https://github.com/kate-the-gr8-tra/trans_resource_bot.git
+ git clone https://github.com/kate-the-gr8-tra/community-resource-bot.git
  cd trans_resource_bot
  ```
 ### 2. Install dependencies
@@ -86,32 +85,32 @@ python bot.py
 ## Commands & Usage
 | Command | Description |
 |---------|------------|
-| `/edit_info` | Edit your pronouns and info |
-| `/explain_neopronouns` | Sends an embed containing a brief summary of what neopronouns are and when they're used|
-| `/haircut` | Sends a link that allows users to find trans-friendly hair places :3 |
-| `/help_me` | Sends links to sites and resources for LGBTQ+ friendly mental health |
-| `/pronouns` | Sends links to sites where you can explore pronouns |
-| `/help_me` | Sends links to sites and resources for LGBTQ+ friendly mental health |
-| `/read_books` | Sends a resource for trans literature |
-| `/register` | Register your pronouns and info |
-| `/send_info` | Sends user information and crafts an example sentence using the user's name and pronoun information|
+| `/delete_info` | Remove your data from the database. |
+| `/edit_info` | Update a specific field (e.g., pronouns). |
+| `/help` | Displays list of commands. |
+| `/ping` | Quick responsiveness test. |
+| `/register` | Create or update your profile. |
+| `/resources` | View curated resource links. |
+| `/send_info` | View your current stored information. |
 
-## 📅 To-Do List
+## To-Do List
 
-* Add a `help` command to list bot's functionalities and how to use them
-* Perform stress tests
+* Implement test modules
+* Update `/register` to be idempotent
 
 ## Contributing 
 Want to help improve this bot? Feel free to submit a pull request or open an issue for feature requests and bug fixes!
 
 ## Liscence
 
-This project is open-source under the MIT License.
+This project is open-source under the MIT License. This project also uses the Pronouns.page API
+under the Opinionated Queer License v1.1 (https://en.pronouns.page/license). The API and its responses are not covered by this project’s MIT license.
 
 ## Contact me:
 
-**Bluesky:** [@katie-k8-kat.bsky.social](https://bsky.app/profile/katie-k8-kat.bsky.social)
+**Linkedin:** https://www.linkedin.com/in/katherine-tuttle-33b4a32b6/ 
+ 
+**Email** tuttlekatie2@gmail.com
 
-**Website Page:** https://kitty-kat-k8.neocities.org/
 
 
