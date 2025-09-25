@@ -168,12 +168,28 @@ class MyCog(ext_commands.Cog):
             try:
                 connection = sqlite3.connect(DB_PATH)
                 cursor = connection.cursor()
-                cursor.execute(
-                    f"""INSERT INTO Users (user_id, username, server_id, name, pronouns, age) 
-                            VALUES (:user_id, :username, :server_id, :name, :pronouns, :age)
-                            """,
-                    user_data,
-                )
+
+                cursor.execute("SELECT user_id FROM Users WHERE user_id = ?", (ctx.user.id,))
+                user_query = cursor.fetchone()
+
+                if user_query:
+                    cursor.execute(
+                        f"""UPDATE Users
+                        SET username = ?, server_id = ?, 
+                        name = ?, pronouns = ?, age = ?,
+                        updated_at = CURRENT_TIMESTAMP
+                        WHERE user_id = ?""",
+                    (user_data["username"],user_data["server_id"],
+                    user_data["name"],user_data["pronouns"],
+                    user_data["age"],user_data["user_id"],)) 
+
+                else:
+                    cursor.execute(
+                        f"""INSERT INTO Users (user_id, username, server_id, name, pronouns, age) 
+                                VALUES (:user_id, :username, :server_id, :name, :pronouns, :age)
+                                """,
+                        user_data,
+                    )
                 cursor.execute(
                     "SELECT * FROM Servers WHERE server_id = ?", (server_id,)
                 )
@@ -191,7 +207,7 @@ class MyCog(ext_commands.Cog):
                 connection.commit()
 
                 bot_message = f"Data for user {discord_user} sucessfully added!"
-                bot_message += """Note: This bot stores your profile (name, pronouns, age, Discord ID, and server ID) 
+                bot_message += """\nNote: This bot stores your profile (name, pronouns, age, Discord ID, and server ID) 
                 so it can respond to commands like /send_info.
                 You can update it anytime with /register or /edit_info, and you can remove it completely with 
                 /delete_my_data."""
@@ -365,7 +381,7 @@ class MyCog(ext_commands.Cog):
 
                 cursor.execute(
                     f"""UPDATE Users 
-                                SET name = ?, pronouns = ?, age = ?
+                                SET name = ?, pronouns = ?, age = ?, updated_at = CURRENT_TIMESTAMP
                                 WHERE user_id = ?;""",
                     (
                         updated_data["name"],

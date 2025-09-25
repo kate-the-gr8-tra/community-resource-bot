@@ -15,5 +15,6 @@ CREATE TABLE IF NOT EXISTS Users(
 	pronouns TEXT,
 	age INTEGER,
 	registration_date datetime DEFAULT CURRENT_TIMESTAMP,
+	updated_at datetime,
 	FOREIGN KEY (server_id) REFERENCES Servers(server_id)
 );
