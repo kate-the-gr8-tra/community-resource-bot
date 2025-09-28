@@ -1,1 +1,43 @@
-{"resource_links": {"pronoun_resources": [{"title": "PronounDB", "url": "https://pronoundb.org/"}, {"title": "Pronouns.page", "url": "https://en.pronouns.page/"}], "support": [{"title": "The Trevor Project (US)", "url": "https://www.thetrevorproject.org/"}, {"title": "LGBT Foundation (UK)", "url": "https://lgbt.foundation/"}], "pronoun_information": [{"title": "General Resource Library", "url": "https://dictionary.cambridge.org/us/dictionary/english/neopronoun"}]}, "language_versions": {"https://en.pronouns.page": "en", "https://pronomen.net": "de", "https://pronoms.fr": "fr", "https://pronombr.es": "es", "https://ja.pronouns.page": "ja", "https://zaimki.pl": "pl", "https://zh.pronouns.page": "zh", "https://ru.pronouns.page": "ru", "https://ua.pronouns.page": "ua", "https://vi.pronouns.page": "vi", "https://pt.pronouns.page": "pt", "https://ar.pronouns.page": "ar", "https://et.pronouns.page": "et", "https://lad.pronouns.page": "lad", "https://no.pronouns.page": "no", "https://ro.pronouns.page": "ro", "https://sv.pronouns.page": "sv", "https://tr.pronouns.page": "tr", "https://nl.pronouns.page": "nl"}, "user_language_card": "en"}
+{
+  "resource_links": {
+    "pronoun_resources": [
+      { "title": "PronounDB", "url": "https://pronoundb.org/" },
+      { "title": "Pronouns.page", "url": "https://en.pronouns.page/" }
+    ],
+    "support": [
+      {
+        "title": "The Trevor Project (US)",
+        "url": "https://www.thetrevorproject.org/"
+      },
+      { "title": "LGBT Foundation (UK)", "url": "https://lgbt.foundation/" }
+    ],
+    "pronoun_information": [
+      {
+        "title": "General Resource Library",
+        "url": "https://dictionary.cambridge.org/us/dictionary/english/neopronoun"
+      }
+    ]
+  },
+  "language_versions": {
+    "https://en.pronouns.page": "en",
+    "https://pronomen.net": "de",
+    "https://pronoms.fr": "fr",
+    "https://pronombr.es": "es",
+    "https://ja.pronouns.page": "ja",
+    "https://zaimki.pl": "pl",
+    "https://zh.pronouns.page": "zh",
+    "https://ru.pronouns.page": "ru",
+    "https://ua.pronouns.page": "ua",
+    "https://vi.pronouns.page": "vi",
+    "https://pt.pronouns.page": "pt",
+    "https://ar.pronouns.page": "ar",
+    "https://et.pronouns.page": "et",
+    "https://lad.pronouns.page": "lad",
+    "https://no.pronouns.page": "no",
+    "https://ro.pronouns.page": "ro",
+    "https://sv.pronouns.page": "sv",
+    "https://tr.pronouns.page": "tr",
+    "https://nl.pronouns.page": "nl"
+  },
+  "user_language_card": "en"
+}

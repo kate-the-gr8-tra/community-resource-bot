@@ -55,14 +55,8 @@ class ResourceBot(bot.Bot):
     """
 
     def __init__(self):
-        """Initializes the bot with the required intents and command tree setup, also toggles the hourly phrase."""
+        """Initializes the bot with the required intents and command tree setup"""
         super().__init__(command_prefix="!", intents=intents)
-        # self.__hourly_phrase_toggle = False #will be for toggling the hourly phrase in a later function
-
-    '''@property
-    async def _hourly_phrase_toggle(self):
-        """A getter method for toggling the state of the hourly phrase """
-        return self.__hourly_phrase_toggle'''
 
     async def setup_hook(self):
         print("Setting up...")
@@ -169,7 +163,9 @@ class MyCog(ext_commands.Cog):
                 connection = sqlite3.connect(DB_PATH)
                 cursor = connection.cursor()
 
-                cursor.execute("SELECT user_id FROM Users WHERE user_id = ?", (ctx.user.id,))
+                cursor.execute(
+                    "SELECT user_id FROM Users WHERE user_id = ?", (ctx.user.id,)
+                )
                 user_query = cursor.fetchone()
 
                 if user_query:
@@ -179,9 +175,15 @@ class MyCog(ext_commands.Cog):
                         name = ?, pronouns = ?, age = ?,
                         updated_at = CURRENT_TIMESTAMP
                         WHERE user_id = ?""",
-                    (user_data["username"],user_data["server_id"],
-                    user_data["name"],user_data["pronouns"],
-                    user_data["age"],user_data["user_id"],)) 
+                        (
+                            user_data["username"],
+                            user_data["server_id"],
+                            user_data["name"],
+                            user_data["pronouns"],
+                            user_data["age"],
+                            user_data["user_id"],
+                        ),
+                    )
 
                 else:
                     cursor.execute(
@@ -535,6 +537,18 @@ class MyCog(ext_commands.Cog):
             embed.add_field(name=cmd.name, value=cmd.description, inline=False)
 
         embed.set_footer(text="Use / before each command to run it")
+
+        await ctx.response.send_message(embed=embed)
+
+    @app_commands.command(name="consent", description="Sends the consent notice")
+    async def consent(self, ctx: discord.Interaction):
+        embed = discord.Embed(title="Consent Notice", color=discord.Color.blurple)
+        embed.add_field(
+            """This bot stores your profile (name, pronouns, age, Discord ID, and server ID) 
+                so it can respond to commands like /send_info.
+                You can update it anytime with /register or /edit_info, and you can remove it completely with 
+                /delete_my_data."""
+        )
 
         await ctx.response.send_message(embed=embed)
 
