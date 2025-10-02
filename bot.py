@@ -46,6 +46,8 @@ BOT_TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_IDS = os.getenv("DEFAULT_GUILD_ID")
 DB_PATH = os.getenv("BOT_DB_PATH", "data/botdata.db")
 
+    
+
 
 class ResourceBot(bot.Bot):
     """A Discord bot that provides curated resources for online communities.
@@ -568,6 +570,9 @@ async def main():
 
 
 my_bot = ResourceBot()
+
+async def setup(bot: ResourceBot):
+    await bot.setup_hook()
 
 if __name__ == "__main__":
     handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
