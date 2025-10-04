@@ -114,7 +114,7 @@ class MyCog(ext_commands.Cog):
         if not data:
             await ctx.response.send_message(
                 f"No links found for the following category: {category.name}.",
-                ephemeral=True,
+                ephemeral=True
             )
             return
 
