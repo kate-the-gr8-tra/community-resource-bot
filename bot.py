@@ -214,7 +214,7 @@ class MyCog(ext_commands.Cog):
                 bot_message += """\nNote: This bot stores your profile (name, pronouns, age, Discord ID, and server ID) 
                 so it can respond to commands like /send_info.
                 You can update it anytime with /register or /edit_info, and you can remove it completely with 
-                /delete_my_data."""
+                /delete_info."""
                 ephemeral_message = True
 
             except sqlite3.Error as e:
