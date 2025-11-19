@@ -226,12 +226,12 @@ class MyCog(ext_commands.Cog):
                 connection.close()
 
         elif user_data == {}:
-            bot_message = "Error: Invalid link"
+            bot_message = "Error: Invalid link."
         elif not user_data:
             if not name:
-                bot_message = "Error: No name"
+                bot_message = "Error: No name."
             else:
-                bot_message = "Error: Unknown pronouns"
+                bot_message = "Error: Unknown pronouns, you can register them on pronouns.page."
         elif age <= 0:
             bot_message = "Error: age cannot be 0 or less."
 
