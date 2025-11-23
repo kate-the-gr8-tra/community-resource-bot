@@ -43,7 +43,7 @@ def save_settings():
 load_dotenv()
 
 BOT_TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_IDS = os.getenv("DEFAULT_GUILD_ID")
+GUILD_ID = os.getenv("DEFAULT_GUILD_ID")
 DB_PATH = os.getenv("BOT_DB_PATH", "data/botdata.db")
 
     
@@ -63,10 +63,10 @@ class ResourceBot(bot.Bot):
     async def setup_hook(self):
         print("Setting up...")
         try:
-            self.tree.clear_commands(guild=discord.Object(id=GUILD_IDS))
-            self.tree.copy_global_to(guild=discord.Object(id=GUILD_IDS))
+            self.tree.clear_commands(guild=discord.Object(id=GUILD_ID))
+            self.tree.copy_global_to(guild=discord.Object(id=GUILD_ID))
             await self.tree.sync()
-            # await self.tree.sync(guild=discord.Object(id = GUILD_IDS))
+            # await self.tree.sync(guild=discord.Object(id = GUILD_ID))
             print("Commands synced")
         except Exception as e:
             print(f"Error during command sync: {e}")
