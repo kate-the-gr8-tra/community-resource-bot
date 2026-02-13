@@ -19,25 +19,24 @@ import re
 import sqlite3
 import random
 import os
+import pandas as pd
 from dotenv import load_dotenv
 from collections import deque
 
 intents = discord.Intents.default()
 intents.message_content = True
-settings_file = "config/settings.json"
+lang_file = "config/lang.json"
 
 try:
-    with open(settings_file, "r") as file:
-        settings = json.load(file)
+    with open(lang_file, "r") as file:
+        lang = json.load(file)
 except FileNotFoundError:
     print("Error: settings.json not found")
     raise
-#    settings = {"hourly_phrase_repeat_feature": False}
-
 
 def save_settings():
-    with open(settings_file, "w") as file:
-        json.dump(settings, file)
+    with open(lang_file, "w") as file:
+        json.dump(lang, file)
 
 
 load_dotenv()
@@ -98,34 +97,10 @@ class MyCog(ext_commands.Cog):
         name="resources", description="Show curated resource links by category"
     )
     @app_commands.describe(category="Select the type of resource you wish to view")
-    @app_commands.choices(
-        category=[
-            app_commands.Choice(name="Pronoun Resources", value="pronoun_resources"),
-            app_commands.Choice(name="Mental Health Support", value="support"),
-            app_commands.Choice(
-                name="Pronoun Information", value="pronoun_information"
-            ),
-        ]
-    )
     async def resources(
-        self, ctx: discord.Interaction, category: app_commands.Choice[str]
+        self, ctx: discord.Interaction
     ):
-        data = settings["resource_links"].get(category.value, [])
-        if not data:
-            await ctx.response.send_message(
-                f"No links found for the following category: {category.name}.",
-                ephemeral=True
-            )
-            return
-
-        embed = discord.Embed(
-            title=f"Resources: {category.name}", color=discord.Color.blurple()
-        )
-
-        for item in data:
-            embed.add_field(name=item["title"], value=item["url"], inline=False)
-
-        await ctx.response.send_message(embed=embed)
+        pass
 
     # TODO: Update the information here to insert values for a username AND a user_id (will affect the verify function also)
     @app_commands.command(
