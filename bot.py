@@ -20,6 +20,7 @@ import sqlite3
 import random
 import os
 import pandas as pd
+import numpy as np
 from dotenv import load_dotenv
 from collections import deque
 
@@ -38,15 +39,13 @@ def save_settings():
     with open(lang_file, "w") as file:
         json.dump(lang, file)
 
+resources = pd.read_csv("config/resources.csv")
 
 load_dotenv()
 
 BOT_TOKEN = os.getenv("DISCORD_TOKEN")
 GUILD_ID = os.getenv("DEFAULT_GUILD_ID")
-DB_PATH = os.getenv("BOT_DB_PATH", "data/botdata.db")
-
-    
-
+DB_PATH = os.getenv("BOT_DB_PATH")
 
 class ResourceBot(bot.Bot):
     """A Discord bot that provides curated resources for online communities.
@@ -97,10 +96,66 @@ class MyCog(ext_commands.Cog):
         name="resources", description="Show curated resource links by category"
     )
     @app_commands.describe(category="Select the type of resource you wish to view")
-    async def resources(
-        self, ctx: discord.Interaction
+    @app_commands.choices(
+        category=[
+            app_commands.Choice(name="Education", value="education"),
+            app_commands.Choice(name="LGBTQ Legal Support", value="lgbtq_legal_support"),
+            app_commands.Choice(name="Mental Health", value="mental_health"),
+            app_commands.Choice(name="Pronoun Resources", value="pronoun_resources")
+        ]
+    )
+    async def resources_by_category(
+        self, ctx: discord.Interaction, category: app_commands.Choice[str]
     ):
-        pass
+        filtered = resources[resources["category"] == category.value]
+
+        if filtered.empty:
+            await ctx.response.send_message(
+            f"No links found for the following category: {category.name}.",
+            ephemeral=True
+            )
+            return
+        
+        embed = discord.Embed(
+            title=f"Resources: {category.name}", color=discord.Color.blurple()
+        )
+
+        for _, row in filtered.iterrows():
+            embed.add_field(
+                name=row["title"],
+                value=row["url"],
+                inline=False
+            )
+        
+        await ctx.response.send_message(embed=embed)
+
+    async def resources_by_tag(self, ctx: discord.Interaction, tag: str):
+        filtered = pd.DataFrame(filter(lambda x: tag in x), resources["tags"])
+
+        if filtered.empty:
+            await ctx.response.send_message(
+            f"No links found with the following tag: {tag}.",
+            ephemeral=True
+            )
+            return
+        
+        scores = np.where(filtered["crisis" in filtered["tag"]], 1, 0)
+        filtered = filtered.assign(score=scores)
+        filtered = filtered.sort_values("score", ascending=False)
+        
+        embed = discord.Embed(
+            title=f"Resources: ", color=discord.Color.blurple()
+        )
+
+        for _, row in filtered.iterrows():
+            embed.add_field(
+                name=row["title"],
+                value=row["url"],
+                inline=False
+            )
+        
+        await ctx.response.send_message(embed=embed)
+        
 
     # TODO: Update the information here to insert values for a username AND a user_id (will affect the verify function also)
     @app_commands.command(

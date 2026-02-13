@@ -2,11 +2,11 @@ import aiohttp
 from typing import Optional
 import json
 
-settings_file =  "config/settings.json"
+lang_file =  "config/lang.json"
 
 try:
-    with open(settings_file, "r") as file:
-        settings = json.load(file)
+    with open(lang_file, "r") as file:
+        lang = json.load(file)
 
 except FileNotFoundError as fe:
     print(f"Error: {fe}")
@@ -17,14 +17,14 @@ async def fetch_data(base_link: str, params: Optional[dict]) -> Optional[dict]:
     data = await api_call(url)
 
     #TODO: filter out all names/pronouns with a value of -1
-    names_list = data["profiles"][settings["language_versions"][base_link]]["names"]
+    names_list = data["profiles"][lang["language_versions"][base_link]]["names"]
     preferred_names = {k : v for k, v in names_list.items() if v == 1}
     for key, value in names_list.items():
         if value == 0:
             preferred_names.update({key : value})
     names = "/".join(preferred_names.keys())
     
-    pronouns_list = data["profiles"][settings["language_versions"][base_link]]["pronouns"]
+    pronouns_list = data["profiles"][lang["language_versions"][base_link]]["pronouns"]
     preferred_pronouns = {k : v for k, v in pronouns_list.items() if v == 1}
     for key, value in pronouns_list.items():
         if value == 0:
@@ -32,7 +32,7 @@ async def fetch_data(base_link: str, params: Optional[dict]) -> Optional[dict]:
     pronouns = "/".join(preferred_pronouns.keys())
     pronouns = await fetch_pronoun_data(base_link, pronouns)
 
-    age = data["profiles"][settings["language_versions"][base_link]].get("age")
+    age = data["profiles"][lang["language_versions"][base_link]].get("age")
     
     user_info = {
         "name": names,
@@ -66,7 +66,7 @@ async def fetch_pronoun_data(base_link: str, pronouns: str):
     return full_pronouns
 
 async def pronoun_look_up(pronoun: str):
-    links = settings["language_versions"]
+    links = lang["language_versions"]
     for key in links.keys():
         url = f"{key}/api/pronouns"
         data = await api_call(url)
