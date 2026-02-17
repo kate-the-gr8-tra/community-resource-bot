@@ -93,7 +93,7 @@ class MyCog(ext_commands.Cog):
         self.bot = bot
 
     @app_commands.command(
-        name="resources", description="Show curated resource links by category"
+        name="resources_by_category", description="Show curated resource links by category"
     )
     @app_commands.describe(category="Select the type of resource you wish to view")
     @app_commands.choices(
@@ -107,7 +107,7 @@ class MyCog(ext_commands.Cog):
     async def resources_by_category(
         self, ctx: discord.Interaction, category: app_commands.Choice[str]
     ):
-        filtered = resources[resources["category"] == category.value]
+        filtered = resources[resources["category"] == category.name]
 
         if filtered.empty:
             await ctx.response.send_message(
@@ -129,8 +129,14 @@ class MyCog(ext_commands.Cog):
         
         await ctx.response.send_message(embed=embed)
 
+    @app_commands.command(
+        name="resources_by_tag", description="Show curated resource links by tag"
+    )
+    @app_commands.describe(tag="Enter a tag associated with a given resource (ex: lgbtq, crisis, etc.)")
     async def resources_by_tag(self, ctx: discord.Interaction, tag: str):
-        filtered = pd.DataFrame(filter(lambda x: tag in x), resources["tags"])
+        #filtered = pd.DataFrame(filter(lambda x: tag in x[1]["tags"], resources.iterrows()))
+        #filtered = resources[tag in resources["tags"]]
+        filtered = resources[[tag in c for c in list(resources["tags"])]]
 
         if filtered.empty:
             await ctx.response.send_message(
@@ -138,8 +144,8 @@ class MyCog(ext_commands.Cog):
             ephemeral=True
             )
             return
-        
-        scores = np.where(filtered["crisis" in filtered["tag"]], 1, 0)
+        #"crisis" in filtered["tags"]
+        scores = np.where("crisis" in filtered["tags"], 1, 0)
         filtered = filtered.assign(score=scores)
         filtered = filtered.sort_values("score", ascending=False)
         
